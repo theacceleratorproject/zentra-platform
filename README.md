@@ -77,6 +77,24 @@ zentra/
 │   │       ├── reports.py             ← /reports + fees + interest
 │   │       └── batch.py               ← /batch pipeline
 │   └── frontend/           # React dashboard (Phase 4)
+│       ├── package.json              ← Dependencies (React 18, Recharts, Lucide)
+│       ├── vite.config.js            ← Dev server (port 3000, API proxy)
+│       ├── index.html                ← Entry HTML + Google Fonts
+│       └── src/
+│           ├── main.jsx              ← React entry point
+│           ├── index.css             ← Design system (navy/gold theme)
+│           ├── App.jsx               ← Router + layout
+│           ├── services/api.js       ← API client (all endpoints)
+│           ├── components/
+│           │   ├── Sidebar.jsx       ← Navigation + API status
+│           │   └── UI.jsx            ← Reusable components
+│           └── pages/
+│               ├── Dashboard.jsx     ← Charts + stats overview
+│               ├── Accounts.jsx      ← Account list + balances
+│               ├── Loans.jsx         ← Calculator + amortization
+│               ├── Transactions.jsx  ← Validation pipeline
+│               ├── Reports.jsx       ← Fee/interest/EOD reports
+│               └── Batch.jsx         ← Batch pipeline runner
 │
 ├── data/
 │   ├── input/              # Transaction input files
@@ -98,8 +116,8 @@ zentra/
 |-------|-------|----------|--------|
 | 1 | COBOL Foundations + Repo Setup | Wks 1–3 | ✅ Complete |
 | 2 | Banking Logic Engine | Wks 4–8 | ✅ Complete |
-| 3 | FastAPI Bridge Layer | Wks 9–12 | 🟡 In Progress |
-| 4 | React Dashboard | Wks 13–17 | ⬜ Pending |
+| 3 | FastAPI Bridge Layer | Wks 9–12 | ✅ Complete |
+| 4 | React Dashboard | Wks 13–17 | ✅ Complete |
 | 5 | Deploy + Consulting Package | Wks 18–24 | ⬜ Pending |
 
 ---
@@ -204,6 +222,45 @@ pytest src/api/tests/ -v
 ### Postman
 
 Import `zentra-api.postman_collection.json` and set `base_url = http://localhost:8000`
+
+---
+
+## 🖥️ Phase 4 — React Dashboard
+
+### Start the Frontend
+
+```bash
+cd src/frontend
+npm install
+npm run dev
+```
+
+Dashboard runs on **port 3000** with API proxy to `localhost:8000`.
+
+### Pages
+
+| Page | Route | Features |
+|------|-------|----------|
+| Dashboard | `/` | System stats, balance trend chart, transaction volume, account snapshot |
+| Accounts | `/accounts` | Account table, active/inactive/overdraft stats, net balance |
+| Loans | `/loans` | Calculator with presets (mortgage, auto, personal), amortization chart + schedule |
+| Transactions | `/transactions` | 2-step validation pipeline, ledger viewer, rejected records table |
+| Reports | `/reports` | Fee Engine, Interest Calculator, EOD Report, output file scanner |
+| Batch | `/batch` | Visual 5-step pipeline runner with COBOL stdout preview |
+
+### Design System
+
+- **Theme**: Dark navy background + gold accents
+- **Fonts**: Playfair Display (headings), DM Sans (body), DM Mono (code)
+- **Charts**: Recharts (AreaChart, LineChart)
+- **Icons**: Lucide React
+
+### Tech Stack
+
+- React 18 + React Router 6
+- Vite 5 (dev server + build)
+- Recharts 2 (data visualization)
+- Lucide React (icons)
 
 ---
 
