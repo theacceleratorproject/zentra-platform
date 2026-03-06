@@ -1,6 +1,8 @@
 #!/bin/bash
-# Usage: bash scripts/run.sh src/cobol/core/PROGRAM.cbl
-# Compiles and runs a COBOL program
+# ─────────────────────────────────────────
+#  Zentra Bank — Compile & Run a single COBOL program
+#  Usage: bash scripts/run.sh src/cobol/core/PROGRAM.cbl
+# ─────────────────────────────────────────
 
 if [ -z "$1" ]; then
   echo "Usage: bash scripts/run.sh <path-to-cobol-file>"
@@ -11,19 +13,22 @@ FILE=$1
 BASENAME=$(basename "$FILE" .cbl)
 OUTPUT="data/output/$BASENAME"
 
+mkdir -p data/output
+
 echo "─────────────────────────────────────"
 echo "  Compiling: $FILE"
 echo "─────────────────────────────────────"
 
-cobc -x -o "$OUTPUT" "$FILE"
+# -I flag includes copybooks from src/cobol/utils/
+cobc -x -I src/cobol/utils -o "$OUTPUT" "$FILE"
 
 if [ $? -eq 0 ]; then
-  echo "✅ Compiled successfully → $OUTPUT"
+  echo "✅ Compiled → $OUTPUT"
   echo ""
   echo "─────────────────────────────────────"
   echo "  Output:"
   echo "─────────────────────────────────────"
   "$OUTPUT"
 else
-  echo "❌ Compilation failed. Check errors above."
+  echo "❌ Compilation failed."
 fi
