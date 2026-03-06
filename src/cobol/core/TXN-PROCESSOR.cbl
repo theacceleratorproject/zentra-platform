@@ -195,13 +195,19 @@
                END-PERFORM.
 
            WRITE-LEDGER-HEADER.
-               MOVE "DATE       ACCOUNT    TYPE AMT            "
-                 & "DESCRIPTION              NEW BALANCE"
-                   TO LEDGER-RECORD
+               MOVE SPACES TO LEDGER-RECORD
+               STRING
+                   "DATE       ACCOUNT    "
+                   DELIMITED SIZE
+                   "TYPE AMT            "
+                   DELIMITED SIZE
+                   "DESCRIPTION"
+                   DELIMITED SIZE
+                   "              NEW BALANCE"
+                   DELIMITED SIZE
+                   INTO LEDGER-RECORD
                WRITE LEDGER-RECORD
-               MOVE "─────────────────────────────────────────"
-                 & "──────────────────────────────────────────"
-                   TO LEDGER-RECORD
+               MOVE ALL "-" TO LEDGER-RECORD
                WRITE LEDGER-RECORD.
 
            WRITE-LEDGER-ENTRY.

@@ -129,13 +129,16 @@
                    TO WS-OUT-LINE
                PERFORM WRITE-LINE
                PERFORM WRITE-DASHES
-               MOVE "DATE       ACCOUNT    TYPE AMOUNT         "
-                 & "DESCRIPTION"
-                   TO WS-OUT-LINE
+               STRING
+                   "DATE       ACCOUNT    "
+                   DELIMITED SIZE
+                   "TYPE AMOUNT         "
+                   DELIMITED SIZE
+                   "DESCRIPTION"
+                   DELIMITED SIZE
+                   INTO WS-OUT-LINE
                PERFORM WRITE-LINE
-               MOVE "──────────────────────────────────────────"
-                 & "──────────────────"
-                   TO WS-OUT-LINE
+               MOVE ALL "-" TO WS-OUT-LINE
                PERFORM WRITE-LINE.
 
            READ-LEDGER-LOOP.
@@ -164,13 +167,16 @@
                    TO WS-OUT-LINE
                PERFORM WRITE-LINE
                PERFORM WRITE-DASHES
-               MOVE "ACCOUNT    NAME                      TYPE"
-                 & "       BALANCE"
-                   TO WS-OUT-LINE
+               STRING
+                   "ACCOUNT    NAME"
+                   DELIMITED SIZE
+                   "                      TYPE"
+                   DELIMITED SIZE
+                   "       BALANCE"
+                   DELIMITED SIZE
+                   INTO WS-OUT-LINE
                PERFORM WRITE-LINE
-               MOVE "──────────────────────────────────────────"
-                 & "────────────────"
-                   TO WS-OUT-LINE
+               MOVE ALL "-" TO WS-OUT-LINE
                PERFORM WRITE-LINE.
 
            READ-ACCOUNTS-LOOP.
@@ -238,9 +244,7 @@
                PERFORM WRITE-DASHES.
 
            WRITE-DASHES.
-               MOVE "================================================"
-                 & "================"
-                   TO EOD-LINE
+               MOVE ALL "=" TO EOD-LINE
                WRITE EOD-LINE.
 
            BLANK-LINE.
