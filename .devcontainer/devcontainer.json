@@ -1,0 +1,39 @@
+{
+  "name": "Zentra Banking Platform",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "bitlang.cobol",
+        "broadcommfd.cobol-language-support",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "humao.rest-client",
+        "PKief.material-icon-theme",
+        "esbenp.prettier-vscode",
+        "GitHub.copilot"
+      ],
+      "settings": {
+        "cobol-lsp.cpy-manager.copybooks-local-path": ["src/cobol/utils"],
+        "editor.tabSize": 4,
+        "editor.rulers": [7, 11, 72],
+        "files.associations": {
+          "*.cbl": "cobol",
+          "*.cob": "cobol",
+          "*.cpy": "cobol"
+        }
+      }
+    }
+  },
+  "forwardPorts": [8000, 3000],
+  "portsAttributes": {
+    "8000": { "label": "Zentra API" },
+    "3000": { "label": "Zentra Frontend" }
+  }
+}
