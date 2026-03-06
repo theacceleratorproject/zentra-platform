@@ -65,6 +65,14 @@ zentra/
 │   │       └── TEST-PROCESSING.cbl
 │   │
 │   ├── api/                # FastAPI bridge layer (Phase 3)
+│   │   ├── main.py                    ← App entry point
+│   │   ├── models.py                  ← Pydantic models
+│   │   ├── parsers.py                 ← .dat file parsers
+│   │   ├── requirements.txt
+│   │   └── routers/
+│   │       ├── accounts.py            ← /accounts endpoints
+│   │       ├── transactions.py        ← /transactions endpoints
+│   │       └── batch.py               ← /batch, /rates, /reports
 │   └── frontend/           # React dashboard (Phase 4)
 │
 ├── data/
@@ -86,8 +94,8 @@ zentra/
 | Phase | Focus | Timeline | Status |
 |-------|-------|----------|--------|
 | 1 | COBOL Foundations + Repo Setup | Wks 1–3 | ✅ Complete |
-| 2 | Banking Logic Engine | Wks 4–8 | 🟡 In Progress |
-| 3 | FastAPI Bridge Layer | Wks 9–12 | ⬜ Pending |
+| 2 | Banking Logic Engine | Wks 4–8 | ✅ Complete |
+| 3 | FastAPI Bridge Layer | Wks 9–12 | 🟡 In Progress |
 | 4 | React Dashboard | Wks 13–17 | ⬜ Pending |
 | 5 | Deploy + Consulting Package | Wks 18–24 | ⬜ Pending |
 
@@ -145,6 +153,37 @@ bash scripts/run-tests.sh
 | E04 | Insufficient funds |
 | E05 | Exceeds single-transaction limit ($100K) |
 | E06 | Invalid transfer target |
+
+---
+
+## 🌐 Phase 3 — FastAPI REST Bridge
+
+### Start the API
+
+```bash
+pip install -r src/api/requirements.txt
+uvicorn src.api.main:app --reload --port 8000
+```
+
+### Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | API info and endpoint list |
+| GET | `/accounts` | List all accounts (query: `?type=CHECKING&status=A`) |
+| GET | `/accounts/{id}` | Get account by ID |
+| GET | `/transactions` | List input transactions (query: `?type=DEP&status=PND`) |
+| GET | `/transactions/approved` | Approved transactions |
+| GET | `/transactions/rejected` | Rejected transactions |
+| GET | `/transactions/fees` | Fee transactions |
+| GET | `/transactions/interest` | Interest transactions |
+| GET | `/rates` | Interest rates by account type |
+| GET | `/reports/eod` | End-of-day report |
+| POST | `/batch/run` | Run full daily batch cycle |
+
+### Interactive Docs
+
+Once running, visit `http://localhost:8000/docs` for Swagger UI.
 
 ---
 
