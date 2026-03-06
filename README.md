@@ -76,25 +76,26 @@ zentra/
 │   │       ├── transactions.py        ← /transactions + CSV upload
 │   │       ├── reports.py             ← /reports + fees + interest
 │   │       └── batch.py               ← /batch pipeline
-│   └── frontend/           # React dashboard (Phase 4)
-│       ├── package.json              ← Dependencies (React 18, Recharts, Lucide)
-│       ├── vite.config.js            ← Dev server (port 3000, API proxy)
-│       ├── index.html                ← Entry HTML + Google Fonts
+│   └── frontend/           # React dashboard (Phase 4 — Lovable)
+│       ├── package.json              ← Dependencies (React 18, TypeScript, Tailwind)
+│       ├── vite.config.ts            ← Dev server (port 3000, API proxy)
+│       ├── tailwind.config.ts        ← Tailwind theme config
+│       ├── index.html                ← Entry HTML
 │       └── src/
-│           ├── main.jsx              ← React entry point
-│           ├── index.css             ← Design system (navy/gold theme)
-│           ├── App.jsx               ← Router + layout
-│           ├── services/api.js       ← API client (all endpoints)
+│           ├── main.tsx              ← React entry point
+│           ├── App.tsx               ← Router + layout
+│           ├── services/api.ts       ← API client (all endpoints)
 │           ├── components/
-│           │   ├── Sidebar.jsx       ← Navigation + API status
-│           │   └── UI.jsx            ← Reusable components
+│           │   ├── ui/               ← shadcn/ui components
+│           │   ├── AppSidebar.tsx     ← Navigation sidebar
+│           │   └── AppLayout.tsx      ← Page layout wrapper
 │           └── pages/
-│               ├── Dashboard.jsx     ← Charts + stats overview
-│               ├── Accounts.jsx      ← Account list + balances
-│               ├── Loans.jsx         ← Calculator + amortization
-│               ├── Transactions.jsx  ← Validation pipeline
-│               ├── Reports.jsx       ← Fee/interest/EOD reports
-│               └── Batch.jsx         ← Batch pipeline runner
+│               ├── Dashboard.tsx      ← Charts + stats overview
+│               ├── Accounts.tsx       ← Account list + balances
+│               ├── Loans.tsx          ← Calculator + amortization
+│               ├── Transactions.tsx   ← Validation pipeline
+│               ├── Reports.tsx        ← Fee/interest/EOD reports
+│               └── BatchPipeline.tsx  ← Batch pipeline runner
 │
 ├── data/
 │   ├── input/              # Transaction input files
@@ -225,7 +226,7 @@ Import `zentra-api.postman_collection.json` and set `base_url = http://localhost
 
 ---
 
-## 🖥️ Phase 4 — React Dashboard
+## 🖥️ Phase 4 — Zentra Operations Hub (React Dashboard)
 
 ### Start the Frontend
 
@@ -241,26 +242,24 @@ Dashboard runs on **port 3000** with API proxy to `localhost:8000`.
 
 | Page | Route | Features |
 |------|-------|----------|
-| Dashboard | `/` | System stats, balance trend chart, transaction volume, account snapshot |
-| Accounts | `/accounts` | Account table, active/inactive/overdraft stats, net balance |
-| Loans | `/loans` | Calculator with presets (mortgage, auto, personal), amortization chart + schedule |
-| Transactions | `/transactions` | 2-step validation pipeline, ledger viewer, rejected records table |
-| Reports | `/reports` | Fee Engine, Interest Calculator, EOD Report, output file scanner |
-| Batch | `/batch` | Visual 5-step pipeline runner with COBOL stdout preview |
-
-### Design System
-
-- **Theme**: Dark navy background + gold accents
-- **Fonts**: Playfair Display (headings), DM Sans (body), DM Mono (code)
-- **Charts**: Recharts (AreaChart, LineChart)
-- **Icons**: Lucide React
+| Index | `/` | Landing / overview |
+| Dashboard | `/dashboard` | System stats, charts, account snapshot |
+| Accounts | `/accounts` | Account table, balances, status |
+| Loans | `/loans` | Loan calculator + amortization |
+| Transactions | `/transactions` | Validation pipeline, ledger, rejected records |
+| Reports | `/reports` | Fee Engine, Interest Calculator, EOD Report |
+| Batch Pipeline | `/batch-pipeline` | Visual pipeline runner with step tracking |
 
 ### Tech Stack
 
-- React 18 + React Router 6
+- React 18 + TypeScript
 - Vite 5 (dev server + build)
+- Tailwind CSS + shadcn/ui (component library)
 - Recharts 2 (data visualization)
+- React Query (data fetching)
+- React Router 6 (routing)
 - Lucide React (icons)
+- Zod (validation)
 
 ---
 
