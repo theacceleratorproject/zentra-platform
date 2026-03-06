@@ -114,12 +114,12 @@
 
            WRITE-COVER-PAGE.
                PERFORM WRITE-DASHES
+               MOVE "ZENTRA BANK" TO WS-OUT-LINE
                PERFORM WRITE-CENTERED
-                   USING "ZENTRA BANK"
+               MOVE "END-OF-DAY REPORT" TO WS-OUT-LINE
                PERFORM WRITE-CENTERED
-                   USING "END-OF-DAY REPORT"
                MOVE WS-TODAY TO WS-OUT-LINE
-               PERFORM WRITE-CENTERED USING WS-TODAY
+               PERFORM WRITE-CENTERED
                PERFORM WRITE-DASHES
                PERFORM BLANK-LINE.
 

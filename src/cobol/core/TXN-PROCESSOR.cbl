@@ -81,6 +81,12 @@
            01 WS-DISP-AMOUNT        PIC $$$,$$$,$$9.99.
            01 WS-DISP-BALANCE       PIC $$$,$$$,$$9.99.
            01 WS-OUT-LINE           PIC X(120).
+      *    --- Output format helpers ---
+           01 WS-OUT-BALANCE        PIC S9(9)V99 SIGN LEADING
+                                        SEPARATE.
+           01 WS-OUT-BAL-X REDEFINES WS-OUT-BALANCE PIC X(12).
+           01 WS-OUT-OD             PIC 9(7)V99.
+           01 WS-OUT-OD-X  REDEFINES WS-OUT-OD PIC X(9).
            01 WS-TXN-EOF            PIC X VALUE "N".
                88 NO-MORE-TXN          VALUE "Y".
 
@@ -220,16 +226,27 @@
            WRITE-UPDATED-ACCOUNTS.
                PERFORM VARYING WS-IDX FROM 1 BY 1
                    UNTIL WS-IDX > WS-ACCT-COUNT
-                   STRING
-                       WE-ID(WS-IDX)        DELIMITED SIZE
-                       WE-NAME(WS-IDX)      DELIMITED SIZE
-                       WE-TYPE(WS-IDX)      DELIMITED SIZE
-                       WE-BALANCE(WS-IDX)   DELIMITED SIZE
-                       WE-OD-LIMIT(WS-IDX)  DELIMITED SIZE
-                       WE-STATUS(WS-IDX)    DELIMITED SIZE
-                       WE-OPEN-DATE(WS-IDX) DELIMITED SIZE
-                       WE-LAST-DATE(WS-IDX) DELIMITED SIZE
-                       INTO ACCT-OUT-RECORD
+                   MOVE SPACES TO ACCT-OUT-RECORD
+                   MOVE WE-ID(WS-IDX)
+                       TO ACCT-OUT-RECORD(1:10)
+                   MOVE WE-NAME(WS-IDX)
+                       TO ACCT-OUT-RECORD(11:25)
+                   MOVE WE-TYPE(WS-IDX)
+                       TO ACCT-OUT-RECORD(36:10)
+                   MOVE WE-BALANCE(WS-IDX)
+                       TO WS-OUT-BALANCE
+                   MOVE WS-OUT-BAL-X
+                       TO ACCT-OUT-RECORD(46:12)
+                   MOVE WE-OD-LIMIT(WS-IDX)
+                       TO WS-OUT-OD
+                   MOVE WS-OUT-OD-X
+                       TO ACCT-OUT-RECORD(58:9)
+                   MOVE WE-STATUS(WS-IDX)
+                       TO ACCT-OUT-RECORD(67:1)
+                   MOVE WE-OPEN-DATE(WS-IDX)
+                       TO ACCT-OUT-RECORD(68:10)
+                   MOVE WE-LAST-DATE(WS-IDX)
+                       TO ACCT-OUT-RECORD(78:10)
                    WRITE ACCT-OUT-RECORD
                END-PERFORM.
 
