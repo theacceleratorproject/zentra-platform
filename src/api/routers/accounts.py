@@ -1,43 +1,58 @@
-"""Zentra Bank — Accounts API endpoints."""
+"""
+routers/accounts.py
+─────────────────────────────────────────────────
+Zentra Bank — Accounts API Router
 
-from fastapi import APIRouter, HTTPException, Query
+Endpoints:
+  GET  /accounts        — List all accounts (calls ACCOUNT-LOADER.cbl)
+  GET  /accounts/health — Verify account file is accessible
+"""
 
-from ..models import Account
-from ..parsers import (
-    INPUT_DIR, OUTPUT_DIR, read_dat_file, parse_account_record,
-)
+from fastapi import APIRouter, HTTPException
+from ..services import cobol
+from ..models.schemas import AccountListResponse, Account
 
 router = APIRouter(prefix="/accounts", tags=["Accounts"])
 
 
-def _load_accounts() -> list[Account]:
-    """Load accounts from updated file first, fall back to master."""
-    updated = OUTPUT_DIR / "ACCOUNTS-UPDATED.dat"
-    master = INPUT_DIR / "ACCOUNTS-MASTER.dat"
-    filepath = updated if updated.exists() and updated.stat().st_size > 0 else master
-    records = read_dat_file(filepath, parse_account_record)
-    return [Account(**r) for r in records]
+@router.get(
+    "",
+    response_model=AccountListResponse,
+    summary="List all accounts",
+    description="Reads ACCOUNTS-MASTER.dat via ACCOUNT-LOADER.cbl and returns "
+                "all accounts with balances and status."
+)
+async def list_accounts():
+    result = cobol.run_account_loader()
+
+    if not result.get("success"):
+        raise HTTPException(
+            status_code=500,
+            detail=f"COBOL ACCOUNT-LOADER failed: {result.get('error', result.get('stderr', 'Unknown'))}"
+        )
+
+    accounts = [
+        Account(**acct) for acct in result.get("accounts", [])
+    ]
+
+    return AccountListResponse(
+        success=True,
+        count=len(accounts),
+        accounts=accounts
+    )
 
 
-@router.get("", response_model=list[Account])
-def list_accounts(
-    type: str | None = Query(None, description="Filter by account type"),
-    status: str | None = Query(None, description="Filter by status (A/F/C)"),
-):
-    """List all accounts with optional filters."""
-    accounts = _load_accounts()
-    if type:
-        accounts = [a for a in accounts if a.account_type.upper() == type.upper()]
-    if status:
-        accounts = [a for a in accounts if a.status.upper() == status.upper()]
-    return accounts
+@router.get(
+    "/health",
+    summary="Account file health check",
+    description="Verifies ACCOUNTS-MASTER.dat is present and ACCOUNT-LOADER compiles."
+)
+async def account_health():
+    from pathlib import Path
+    master_file = cobol.DATA_INPUT / "ACCOUNTS-MASTER.dat"
 
-
-@router.get("/{account_id}", response_model=Account)
-def get_account(account_id: str):
-    """Get a single account by ID."""
-    accounts = _load_accounts()
-    for acct in accounts:
-        if acct.account_id == account_id.upper():
-            return acct
-    raise HTTPException(status_code=404, detail=f"Account {account_id} not found")
+    return {
+        "accounts_master_exists": master_file.exists(),
+        "accounts_master_path": str(master_file),
+        "accounts_master_size_bytes": master_file.stat().st_size if master_file.exists() else 0
+    }

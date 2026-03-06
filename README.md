@@ -65,14 +65,17 @@ zentra/
 │   │       └── TEST-PROCESSING.cbl
 │   │
 │   ├── api/                # FastAPI bridge layer (Phase 3)
-│   │   ├── main.py                    ← App entry point
-│   │   ├── models.py                  ← Pydantic models
-│   │   ├── parsers.py                 ← .dat file parsers
+│   │   ├── main.py                    ← App + health + CORS
+│   │   ├── models/schemas.py          ← Pydantic request/response models
+│   │   ├── services/cobol.py          ← COBOL subprocess bridge
 │   │   ├── requirements.txt
+│   │   ├── tests/test_api.py          ← pytest test suite
 │   │   └── routers/
 │   │       ├── accounts.py            ← /accounts endpoints
-│   │       ├── transactions.py        ← /transactions endpoints
-│   │       └── batch.py               ← /batch, /rates, /reports
+│   │       ├── loans.py               ← /loans calculator
+│   │       ├── transactions.py        ← /transactions + CSV upload
+│   │       ├── reports.py             ← /reports + fees + interest
+│   │       └── batch.py               ← /batch pipeline
 │   └── frontend/           # React dashboard (Phase 4)
 │
 ├── data/
@@ -156,7 +159,7 @@ bash scripts/run-tests.sh
 
 ---
 
-## 🌐 Phase 3 — FastAPI REST Bridge
+## 🌐 Phase 3 — FastAPI REST Bridge (15 endpoints)
 
 ### Start the API
 
@@ -167,23 +170,40 @@ uvicorn src.api.main:app --reload --port 8000
 
 ### Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/` | API info and endpoint list |
-| GET | `/accounts` | List all accounts (query: `?type=CHECKING&status=A`) |
-| GET | `/accounts/{id}` | Get account by ID |
-| GET | `/transactions` | List input transactions (query: `?type=DEP&status=PND`) |
-| GET | `/transactions/approved` | Approved transactions |
-| GET | `/transactions/rejected` | Rejected transactions |
-| GET | `/transactions/fees` | Fee transactions |
-| GET | `/transactions/interest` | Interest transactions |
-| GET | `/rates` | Interest rates by account type |
-| GET | `/reports/eod` | End-of-day report |
-| POST | `/batch/run` | Run full daily batch cycle |
+| Method | Endpoint | COBOL Program / Description |
+|--------|----------|---------------------------|
+| GET | `/health` | API + GnuCOBOL availability check |
+| GET | `/accounts` | ACCOUNT-LOADER.cbl |
+| GET | `/accounts/health` | File check |
+| POST | `/loans/calculate` | Monthly payment, total interest (Python) |
+| POST | `/loans/amortize` | Full amortization schedule (Python) |
+| POST | `/transactions/validate` | TXN-VALIDATOR.cbl (6 business rules) |
+| POST | `/transactions/process` | TXN-PROCESSOR.cbl |
+| POST | `/transactions/upload` | CSV upload → validate |
+| GET | `/transactions/ledger` | Audit trail |
+| GET | `/transactions/rejected` | Failed records with error codes |
+| POST | `/reports/fees` | FEE-ENGINE.cbl |
+| POST | `/reports/interest` | INTEREST-CALC.cbl |
+| GET | `/reports/eod` | EOD-REPORT.cbl (JSON) |
+| GET | `/reports/eod/text` | EOD-REPORT.cbl (plain text) |
+| GET | `/reports/files` | List output files |
+| POST | `/batch/run` | Full pipeline: Fee→Validate→Process→Interest→EOD |
+| GET | `/batch/status` | Last batch result |
 
 ### Interactive Docs
 
-Once running, visit `http://localhost:8000/docs` for Swagger UI.
+- **Swagger UI**: `http://localhost:8000/docs`
+- **ReDoc**: `http://localhost:8000/redoc`
+
+### Run API Tests
+
+```bash
+pytest src/api/tests/ -v
+```
+
+### Postman
+
+Import `zentra-api.postman_collection.json` and set `base_url = http://localhost:8000`
 
 ---
 

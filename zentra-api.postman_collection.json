@@ -1,0 +1,139 @@
+{
+  "info": {
+    "name": "Zentra Banking API",
+    "description": "Complete Postman collection for the Zentra Bank FastAPI bridge layer.\nImport this into Postman and set the {{base_url}} variable to http://localhost:8000",
+    "version": "2.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Root",
+          "request": { "method": "GET", "url": "{{base_url}}/" }
+        },
+        {
+          "name": "Health Check",
+          "request": { "method": "GET", "url": "{{base_url}}/health" }
+        }
+      ]
+    },
+    {
+      "name": "Accounts",
+      "item": [
+        {
+          "name": "List All Accounts",
+          "request": { "method": "GET", "url": "{{base_url}}/accounts" }
+        },
+        {
+          "name": "Account File Health",
+          "request": { "method": "GET", "url": "{{base_url}}/accounts/health" }
+        }
+      ]
+    },
+    {
+      "name": "Loans",
+      "item": [
+        {
+          "name": "Quick Loan Calculate - 30yr Mortgage",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/loans/calculate",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"principal\": 350000,\n  \"annual_rate_pct\": 6.875,\n  \"years\": 30\n}"
+            }
+          }
+        },
+        {
+          "name": "Full Amortization Schedule - 5yr Auto",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/loans/amortize",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"principal\": 45000,\n  \"annual_rate_pct\": 5.9,\n  \"years\": 5\n}"
+            }
+          }
+        },
+        {
+          "name": "Small Personal Loan",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/loans/calculate",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"principal\": 10000,\n  \"annual_rate_pct\": 12.5,\n  \"years\": 3\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Transactions",
+      "item": [
+        {
+          "name": "Validate Transactions",
+          "request": { "method": "POST", "url": "{{base_url}}/transactions/validate" }
+        },
+        {
+          "name": "Process Approved Transactions",
+          "request": { "method": "POST", "url": "{{base_url}}/transactions/process" }
+        },
+        {
+          "name": "Get Transaction Ledger",
+          "request": { "method": "GET", "url": "{{base_url}}/transactions/ledger" }
+        },
+        {
+          "name": "Get Rejected Transactions",
+          "request": { "method": "GET", "url": "{{base_url}}/transactions/rejected" }
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        {
+          "name": "Run Fee Engine",
+          "request": { "method": "POST", "url": "{{base_url}}/reports/fees" }
+        },
+        {
+          "name": "Run Interest Calculator",
+          "request": { "method": "POST", "url": "{{base_url}}/reports/interest" }
+        },
+        {
+          "name": "Get EOD Report (JSON)",
+          "request": { "method": "GET", "url": "{{base_url}}/reports/eod" }
+        },
+        {
+          "name": "Get EOD Report (Plain Text)",
+          "request": { "method": "GET", "url": "{{base_url}}/reports/eod/text" }
+        },
+        {
+          "name": "List Output Files",
+          "request": { "method": "GET", "url": "{{base_url}}/reports/files" }
+        }
+      ]
+    },
+    {
+      "name": "Batch Pipeline",
+      "item": [
+        {
+          "name": "Run Full Daily Batch",
+          "request": { "method": "POST", "url": "{{base_url}}/batch/run" }
+        },
+        {
+          "name": "Check Batch Status",
+          "request": { "method": "GET", "url": "{{base_url}}/batch/status" }
+        }
+      ]
+    }
+  ]
+}
