@@ -10,6 +10,7 @@ import Loans from "./pages/Loans";
 import Transactions from "./pages/Transactions";
 import Reports from "./pages/Reports";
 import BatchPipeline from "./pages/BatchPipeline";
+import CustomerPortal from "./pages/CustomerPortal";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -20,17 +21,22 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <AppLayout>
-          <Routes>
+        <Routes>
+          {/* Operations Hub — inside AppLayout (sidebar + nav) */}
+          <Route element={<AppLayout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/accounts" element={<Accounts />} />
             <Route path="/loans" element={<Loans />} />
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/batch" element={<BatchPipeline />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AppLayout>
+          </Route>
+
+          {/* Customer Portal — full-screen mobile shell, no sidebar */}
+          <Route path="/portal" element={<CustomerPortal />} />
+
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

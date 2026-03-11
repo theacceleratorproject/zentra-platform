@@ -6,6 +6,7 @@ import {
   ArrowLeftRight,
   FileBarChart,
   Zap,
+  Smartphone,
 } from 'lucide-react';
 
 const navItems = [
@@ -49,6 +50,21 @@ export function AppSidebar() {
           );
         })}
       </nav>
+
+      {/* Customer Portal Link */}
+      <div className="px-3 mt-2">
+        <div className="h-px bg-gradient-to-r from-primary/30 to-transparent mb-3" />
+        <a
+          href="/portal"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group text-slate-300 hover:text-gold hover:bg-primary/5 border-l-2 border-transparent"
+        >
+          <Smartphone size={18} className="text-slate-500 group-hover:text-gold" />
+          <span>Customer Portal</span>
+          <span className="ml-auto text-[10px] text-slate-500 group-hover:text-gold/70">&#8599;</span>
+        </a>
+      </div>
 
       {/* Footer */}
       <div className="px-5 pb-5 space-y-3">
