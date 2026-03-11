@@ -1,0 +1,12 @@
+.git
+.gitignore
+.devcontainer
+node_modules
+__pycache__
+*.pyc
+.DS_Store
+.env
+docs/
+zentra-api.postman_collection.json
+data/output/*
+!data/output/.gitkeep

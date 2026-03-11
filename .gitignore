@@ -19,3 +19,6 @@ Thumbs.db
 # IDE
 .vscode/settings.json
 *.swp
+
+# Docker
+docker-compose.override.yml

@@ -1,0 +1,54 @@
+name: Docker Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-api:
+    name: Build API Image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build API image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/api/Dockerfile
+          push: false
+          tags: zentra-api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test API container
+        run: |
+          docker run -d --name zentra-api-test -p 8000:8000 zentra-api:latest
+          sleep 10
+          curl -f http://localhost:8000/health || exit 1
+          docker stop zentra-api-test
+
+  build-frontend:
+    name: Build Frontend Image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/frontend/Dockerfile
+          push: false
+          tags: zentra-frontend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

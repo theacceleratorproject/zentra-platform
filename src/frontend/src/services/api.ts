@@ -1,5 +1,5 @@
-const BASE = 'http://localhost:8000';
-const USE_MOCK = true;
+const BASE = import.meta.env.VITE_API_BASE || '/api';
+const USE_MOCK = false;
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 

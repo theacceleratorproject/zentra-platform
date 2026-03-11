@@ -13,6 +13,8 @@ Swagger docs: http://localhost:8000/docs
 ReDoc:        http://localhost:8000/redoc
 """
 
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -62,10 +64,11 @@ Client → FastAPI → subprocess → COBOL Binary → flat files → FastAPI �
 )
 
 # ── CORS ────────────────────────────────────────────────
-# Allow the React frontend (Phase 4) and Swagger UI
+_allowed_origins = os.environ.get("ALLOWED_ORIGINS", "*").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],        # tighten in production
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

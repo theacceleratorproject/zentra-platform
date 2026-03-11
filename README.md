@@ -19,7 +19,24 @@
 
 ---
 
-## 🚀 Quick Start (GitHub Codespaces)
+## 🚀 Quick Start
+
+### Docker (Recommended)
+
+```bash
+git clone https://github.com/theacceleratorproject/zentra-platform.git
+cd zentra-platform
+cp .env.example .env
+docker compose up --build
+```
+
+| Service | URL |
+|---------|-----|
+| Dashboard | http://localhost |
+| API | http://localhost:8000 |
+| Swagger Docs | http://localhost:8000/docs |
+
+### GitHub Codespaces
 
 1. Open this repo in GitHub Codespaces
 2. Wait for the environment to auto-configure (~2 mins)
@@ -101,7 +118,22 @@ zentra/
 │   ├── input/              # Transaction input files
 │   └── output/             # Compiled binaries + ledger files
 │
+├── docker/
+│   ├── api/Dockerfile             ← Multi-stage API container
+│   └── frontend/
+│       ├── Dockerfile             ← Multi-stage frontend container
+│       └── nginx.conf             ← Reverse proxy + SPA config
+├── .github/workflows/
+│   ├── ci.yml                     ← Lint + test on push/PR
+│   ├── docker-build.yml           ← Build Docker images
+│   └── deploy.yml                 ← Deploy to AWS EC2
+├── docker-compose.yml             ← Service orchestration
+├── .env.example                   ← Environment template
+│
 ├── docs/                   # Architecture docs, white paper
+│   ├── zentra-white-paper.md      ← Consulting white paper
+│   ├── architecture.md            ← Technical architecture
+│   └── deployment-guide.md        ← AWS deployment guide
 ├── scripts/
 │   ├── run.sh              # Compile + run any COBOL file
 │   ├── run-batch.sh        # Run full daily batch cycle
@@ -119,7 +151,7 @@ zentra/
 | 2 | Banking Logic Engine | Wks 4–8 | ✅ Complete |
 | 3 | FastAPI Bridge Layer | Wks 9–12 | ✅ Complete |
 | 4 | React Dashboard | Wks 13–17 | ✅ Complete |
-| 5 | Deploy + Consulting Package | Wks 18–24 | ⬜ Pending |
+| 5 | Deploy + Consulting Package | Wks 18–24 | ✅ Complete |
 
 ---
 
@@ -260,6 +292,40 @@ Dashboard runs on **port 3000** with API proxy to `localhost:8000`.
 - React Router 6 (routing)
 - Lucide React (icons)
 - Zod (validation)
+
+---
+
+## 🐳 Phase 5 — Deploy + Consulting Package
+
+### Docker
+
+```bash
+cp .env.example .env
+docker compose up --build        # Dashboard: localhost  |  API: localhost:8000
+```
+
+- **API container:** Python 3.11 + GnuCOBOL (COBOL programs pre-compiled at build time)
+- **Frontend container:** nginx serving Vite production build with API reverse proxy
+
+### CI/CD (GitHub Actions)
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `ci.yml` | Push / PR | COBOL tests + API tests + frontend lint & build |
+| `docker-build.yml` | Push to main | Build Docker images + API smoke test |
+| `deploy.yml` | Push to main | SSH deploy to AWS EC2 |
+
+### AWS Deployment
+
+See [Deployment Guide](docs/deployment-guide.md) for step-by-step EC2 setup.
+
+### Documentation
+
+| Document | Description |
+|----------|-------------|
+| [White Paper](docs/zentra-white-paper.md) | Consulting deliverable — COBOL modernization, architecture, ROI analysis |
+| [Architecture](docs/architecture.md) | Technical deep dive — data flow, components, infrastructure |
+| [Deployment Guide](docs/deployment-guide.md) | Docker quickstart + AWS EC2 step-by-step |
 
 ---
 
