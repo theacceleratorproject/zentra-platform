@@ -19,7 +19,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .routers import accounts, loans, transactions, reports, batch
+from .routers import accounts, loans, transactions, reports, batch, auth
+from .routers.auth import startup as auth_startup
 from .models.schemas import HealthResponse
 
 # ── App Setup ───────────────────────────────────────────
@@ -80,6 +81,13 @@ app.include_router(loans.router)
 app.include_router(transactions.router)
 app.include_router(reports.router)
 app.include_router(batch.router)
+app.include_router(auth.router)
+
+
+# ── DB Init ────────────────────────────────────────────────
+@app.on_event("startup")
+def on_startup():
+    auth_startup()
 
 
 # ── Root ────────────────────────────────────────────────

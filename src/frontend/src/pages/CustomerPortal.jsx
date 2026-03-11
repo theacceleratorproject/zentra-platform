@@ -1,1134 +1,532 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
-// ─── THEME ────────────────────────────────────────────────────────────────────
+// ─── TRANSLATIONS ─────────────────────────────────────────────────────────────
+const T = {
+  en: {
+    appName: "ZENTRA",
+    tagline: "Private Banking Platform",
+    signIn: "Sign In", openAccount: "Open Account",
+    email: "Email Address", password: "Password", name: "Full Name",
+    confirmPw: "Confirm Password", minPw: "Min 8 characters",
+    creating: "Creating...", signingIn: "Signing in...",
+    goodMorning: "Good morning", goodAfternoon: "Good afternoon", goodEvening: "Good evening",
+    totalPortfolio: "Total Portfolio",
+    batchNote: "Nightly batch reconciliation runs at 22:00 EST",
+    accounts: "Accounts", newAccount: "New Account",
+    quickActions: "Quick Actions",
+    deposit: "Deposit", withdraw: "Withdraw", transfer: "Transfer",
+    history: "History", home: "Home", profile: "Profile",
+    recentTxns: "Recent Transactions", viewAll: "View All Transactions",
+    alerts: "Alerts",
+    overdraftTitle: "Overdraft",
+    overdraftBody: "Balance is {bal}. Overdraft fee may apply.",
+    lowBalTitle: "Low Balance",
+    lowBalBody: "Balance is {bal}. Consider a deposit.",
+    depositFunds: "Deposit Funds", depositSub: "Add funds to your account in real-time.",
+    withdrawFunds: "Withdraw Funds", withdrawSub: "Withdraw from your account instantly.",
+    transferFunds: "Transfer Funds", transferSub: "Move money between your Zentra accounts.",
+    amount: "Amount", destination: "Destination Account", source: "Source Account",
+    fromAccount: "From Account", toAccount: "To Account",
+    description: "Description", continue: "Continue",
+    confirmDeposit: "Confirm Deposit", confirmWithdraw: "Confirm Withdrawal", confirmTransfer: "Confirm Transfer",
+    confirm: "Confirm", edit: "Edit", back: "Back",
+    processing: "Processing via COBOL Engine...",
+    depositSuccess: "Deposit Successful", withdrawSuccess: "Withdrawal Complete", transferSuccess: "Transfer Complete",
+    depositSuccessSub: "deposited to", withdrawSuccessSub: "withdrawn from", transferSuccessSub: "moved from",
+    to: "to",
+    fundsAvailable: "Funds available immediately. Reflected in nightly batch at 22:00 EST.",
+    backToDash: "Back to Dashboard",
+    overdraftWarn: "Overdraft Warning",
+    overdraftWarnBody: "This exceeds your available balance + overdraft limit of",
+    insufficientFunds: "Insufficient funds",
+    ref: "REF", processingCobol: "Real-time via COBOL", batchReconcile: "Batch Reconcile",
+    transactionHistory: "Transaction History", found: "transactions found",
+    filterAccount: "Filter by Account", allAccounts: "All Accounts",
+    all: "All", deposits: "Deposits", withdrawals: "Withdrawals", transfers: "Transfers", fees: "Fees",
+    noTxns: "No transactions found",
+    openNewAccount: "Open New Account",
+    openNewSub: "Choose your account type. Powered by COBOL batch engine.",
+    accountTerms: "Account Terms", monthlyFee: "Monthly Fee",
+    overdraftLimit: "Overdraft Limit", interestRate: "Interest Rate",
+    cobolProcessing: "Real-time + nightly COBOL batch",
+    openBtn: "Open",
+    personalInfo: "Personal Information", securityPw: "Security & Password",
+    notifPrefs: "Notification Preferences", downloadStmt: "Download Statement",
+    opsDashboard: "Operations Dashboard", apiDocs: "API Documentation",
+    cobolSchedule: "COBOL Batch Schedule", language: "Language",
+    signOut: "Sign Out",
+    saving: "Saving...", save: "Save Changes", saved: "Saved ✓",
+    currentPw: "Current Password", newPw: "New Password", confirmNewPw: "Confirm New Password",
+    updatePw: "Update Password", pwUpdated: "Password updated successfully",
+    pwMismatch: "Passwords do not match", pwWrong: "Current password is incorrect",
+    notifLowBal: "Low Balance Alerts", notifTxn: "Transaction Alerts", notifBatch: "Batch Cycle Alerts",
+    notifSaved: "Preferences saved",
+    stmtDownload: "Download Statement", stmtSub: "Export your transaction history as CSV",
+    stmtBtn: "Download CSV",
+    phone: "Phone Number",
+    accountsLinked: "Linked Accounts", noAccountsLinked: "No accounts linked yet",
+    linkAccount: "Link Account", linkAccountId: "Account ID (e.g. ZNT-001042)",
+    linking: "Linking...", linked: "Linked ✓",
+    active: "Active", suspended: "Suspended", closed: "Closed",
+    checking: "CHECKING", savings: "SAVINGS", moneyMarket: "MONEY MARKET",
+    checkingDesc: "Daily transactions, debit access, overdraft protection up to $500",
+    savingsDesc: "High-yield savings with nightly interest crediting via batch cycle",
+    mmDesc: "Premium rates for balances over $10,000",
+    apiError: "Connection error. Please try again.",
+    loginError: "Invalid email or password",
+    registerError: "This email is already registered",
+    fieldRequired: "All fields are required",
+    accountNotFound: "Account not found",
+    sessionExpired: "Session expired. Please sign in again.",
+    waivedWith: "waived with $1,500 min",
+    none: "None",
+    apy: "APY",
+    noneOD: "None",
+  },
+  fr: {
+    appName: "ZENTRA",
+    tagline: "Plateforme Bancaire Privée",
+    signIn: "Connexion", openAccount: "Ouvrir un Compte",
+    email: "Adresse E-mail", password: "Mot de Passe", name: "Nom Complet",
+    confirmPw: "Confirmer le Mot de Passe", minPw: "Min 8 caractères",
+    creating: "Création...", signingIn: "Connexion...",
+    goodMorning: "Bonjour", goodAfternoon: "Bon après-midi", goodEvening: "Bonsoir",
+    totalPortfolio: "Portefeuille Total",
+    batchNote: "Traitement nocturne à 22h00 HNE",
+    accounts: "Comptes", newAccount: "Nouveau Compte",
+    quickActions: "Actions Rapides",
+    deposit: "Dépôt", withdraw: "Retrait", transfer: "Virement",
+    history: "Historique", home: "Accueil", profile: "Profil",
+    recentTxns: "Transactions Récentes", viewAll: "Voir Toutes les Transactions",
+    alerts: "Alertes",
+    overdraftTitle: "Découvert",
+    overdraftBody: "Solde: {bal}. Des frais de découvert peuvent s'appliquer.",
+    lowBalTitle: "Solde Faible",
+    lowBalBody: "Solde: {bal}. Pensez à effectuer un dépôt.",
+    depositFunds: "Effectuer un Dépôt", depositSub: "Ajoutez des fonds à votre compte en temps réel.",
+    withdrawFunds: "Effectuer un Retrait", withdrawSub: "Retirez de votre compte instantanément.",
+    transferFunds: "Effectuer un Virement", transferSub: "Transférez de l'argent entre vos comptes Zentra.",
+    amount: "Montant", destination: "Compte Destinataire", source: "Compte Source",
+    fromAccount: "Du Compte", toAccount: "Vers le Compte",
+    description: "Description", continue: "Continuer",
+    confirmDeposit: "Confirmer le Dépôt", confirmWithdraw: "Confirmer le Retrait", confirmTransfer: "Confirmer le Virement",
+    confirm: "Confirmer", edit: "Modifier", back: "Retour",
+    processing: "Traitement via Moteur COBOL...",
+    depositSuccess: "Dépôt Réussi", withdrawSuccess: "Retrait Effectué", transferSuccess: "Virement Effectué",
+    depositSuccessSub: "déposé sur", withdrawSuccessSub: "retiré de", transferSuccessSub: "transféré de",
+    to: "vers",
+    fundsAvailable: "Fonds disponibles immédiatement. Intégré au traitement nocturne à 22h00 HNE.",
+    backToDash: "Retour au Tableau de Bord",
+    overdraftWarn: "Avertissement de Découvert",
+    overdraftWarnBody: "Ceci dépasse votre solde disponible + limite de découvert de",
+    insufficientFunds: "Fonds insuffisants",
+    ref: "RÉF", processingCobol: "Temps réel via COBOL", batchReconcile: "Rapprochement nocturne",
+    transactionHistory: "Historique des Transactions", found: "transactions trouvées",
+    filterAccount: "Filtrer par Compte", allAccounts: "Tous les Comptes",
+    all: "Tout", deposits: "Dépôts", withdrawals: "Retraits", transfers: "Virements", fees: "Frais",
+    noTxns: "Aucune transaction trouvée",
+    openNewAccount: "Ouvrir un Nouveau Compte",
+    openNewSub: "Choisissez le type de compte. Propulsé par le moteur COBOL.",
+    accountTerms: "Conditions du Compte", monthlyFee: "Frais Mensuels",
+    overdraftLimit: "Limite de Découvert", interestRate: "Taux d'Intérêt",
+    cobolProcessing: "Temps réel + traitement COBOL nocturne",
+    openBtn: "Ouvrir",
+    personalInfo: "Informations Personnelles", securityPw: "Sécurité & Mot de Passe",
+    notifPrefs: "Préférences de Notification", downloadStmt: "Télécharger le Relevé",
+    opsDashboard: "Tableau de Bord Opérationnel", apiDocs: "Documentation API",
+    cobolSchedule: "Planification COBOL", language: "Langue",
+    signOut: "Déconnexion",
+    saving: "Enregistrement...", save: "Enregistrer", saved: "Enregistré ✓",
+    currentPw: "Mot de Passe Actuel", newPw: "Nouveau Mot de Passe", confirmNewPw: "Confirmer le Nouveau Mot de Passe",
+    updatePw: "Mettre à Jour", pwUpdated: "Mot de passe mis à jour",
+    pwMismatch: "Les mots de passe ne correspondent pas", pwWrong: "Mot de passe actuel incorrect",
+    notifLowBal: "Alertes Solde Faible", notifTxn: "Alertes de Transaction", notifBatch: "Alertes de Traitement",
+    notifSaved: "Préférences enregistrées",
+    stmtDownload: "Télécharger le Relevé", stmtSub: "Exportez votre historique en CSV",
+    stmtBtn: "Télécharger CSV",
+    phone: "Numéro de Téléphone",
+    accountsLinked: "Comptes Liés", noAccountsLinked: "Aucun compte lié",
+    linkAccount: "Lier un Compte", linkAccountId: "ID de Compte (ex. ZNT-001042)",
+    linking: "Liaison...", linked: "Lié ✓",
+    active: "Actif", suspended: "Suspendu", closed: "Fermé",
+    checking: "COURANT", savings: "ÉPARGNE", moneyMarket: "MARCHÉ MONÉTAIRE",
+    checkingDesc: "Transactions quotidiennes, accès débit, protection découvert jusqu'à 500$",
+    savingsDesc: "Épargne à rendement élevé avec crédits d'intérêts nocturnes",
+    mmDesc: "Taux premium pour soldes supérieurs à 10 000$",
+    apiError: "Erreur de connexion. Veuillez réessayer.",
+    loginError: "Email ou mot de passe invalide",
+    registerError: "Cet email est déjà enregistré",
+    fieldRequired: "Tous les champs sont obligatoires",
+    accountNotFound: "Compte introuvable",
+    sessionExpired: "Session expirée. Veuillez vous reconnecter.",
+    waivedWith: "exonéré avec 1 500$ min",
+    none: "Aucun",
+    apy: "TAE",
+    noneOD: "Aucune",
+  },
+};
+
+// ─── CSS ──────────────────────────────────────────────────────────────────────
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500&display=swap');
-
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   :root {
-    --navy:   #0a0f1e;
-    --navy2:  #111827;
-    --navy3:  #1c2535;
-    --navy4:  #243044;
-    --gold:   #c9a84c;
-    --gold2:  #e8c97a;
-    --gold3:  #f5e6b8;
-    --white:  #f8f6f1;
-    --muted:  #8a95a8;
-    --red:    #e05252;
-    --green:  #4caf82;
-    --border: rgba(201,168,76,0.15);
-    --glass:  rgba(255,255,255,0.04);
-  }
-
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--navy);
-    color: var(--white);
-    min-height: 100vh;
-    -webkit-font-smoothing: antialiased;
-  }
-
-  .app {
-    max-width: 430px;
-    margin: 0 auto;
-    min-height: 100vh;
-    background: var(--navy);
-    position: relative;
-    overflow: hidden;
-  }
-
-  /* ── AUTH ── */
-  .auth-screen {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    padding: 0;
-    background: var(--navy);
-  }
-  .auth-hero {
-    background: linear-gradient(160deg, #0d1529 0%, #1a2540 60%, #0a0f1e 100%);
-    padding: 72px 32px 48px;
-    position: relative;
-    overflow: hidden;
-  }
-  .auth-hero::before {
-    content: '';
-    position: absolute;
-    top: -60px; right: -60px;
-    width: 240px; height: 240px;
-    border-radius: 50%;
-    border: 1px solid rgba(201,168,76,0.12);
-  }
-  .auth-hero::after {
-    content: '';
-    position: absolute;
-    bottom: -40px; left: -40px;
-    width: 180px; height: 180px;
-    border-radius: 50%;
-    border: 1px solid rgba(201,168,76,0.08);
-  }
-  .auth-logo {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 38px;
-    font-weight: 300;
-    letter-spacing: 6px;
-    color: var(--white);
-    margin-bottom: 8px;
-  }
-  .auth-logo span { color: var(--gold); }
-  .auth-tagline {
-    font-size: 12px;
-    letter-spacing: 3px;
-    color: var(--muted);
-    text-transform: uppercase;
-  }
-  .auth-body {
-    padding: 40px 28px;
-    flex: 1;
-  }
-  .auth-tabs {
-    display: flex;
-    background: var(--navy3);
-    border-radius: 12px;
-    padding: 4px;
-    margin-bottom: 32px;
-  }
-  .auth-tab {
-    flex: 1;
-    padding: 10px;
-    border: none;
-    background: none;
-    color: var(--muted);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    font-weight: 500;
-    border-radius: 9px;
-    cursor: pointer;
-    transition: all .2s;
-  }
-  .auth-tab.active {
-    background: var(--gold);
-    color: var(--navy);
-  }
-
-  /* ── INPUTS ── */
-  .field {
-    margin-bottom: 18px;
-  }
-  .field label {
-    display: block;
-    font-size: 11px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 8px;
-  }
-  .field input, .field select {
-    width: 100%;
-    background: var(--navy3);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 14px 16px;
-    color: var(--white);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 15px;
-    outline: none;
-    transition: border-color .2s;
-    -webkit-appearance: none;
-  }
-  .field input:focus, .field select:focus {
-    border-color: var(--gold);
-  }
-  .field select option { background: var(--navy2); }
-
-  /* ── BUTTONS ── */
-  .btn-primary {
-    width: 100%;
-    background: var(--gold);
-    color: var(--navy);
-    border: none;
-    border-radius: 12px;
-    padding: 16px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 15px;
-    font-weight: 500;
-    letter-spacing: 1px;
-    cursor: pointer;
-    transition: all .2s;
-    margin-top: 8px;
-  }
-  .btn-primary:hover { background: var(--gold2); transform: translateY(-1px); }
-  .btn-primary:active { transform: translateY(0); }
-  .btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; }
-
-  .btn-ghost {
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--white);
-    border-radius: 12px;
-    padding: 14px 20px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all .2s;
-  }
-  .btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
-
-  .btn-danger {
-    background: rgba(224,82,82,0.12);
-    border: 1px solid rgba(224,82,82,0.3);
-    color: var(--red);
-    border-radius: 10px;
-    padding: 12px 18px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all .2s;
-    width: 100%;
-    margin-top: 8px;
-  }
-
-  /* ── TOP BAR ── */
-  .topbar {
-    padding: 52px 24px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    background: var(--navy);
-    z-index: 10;
-  }
-  .topbar-logo {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 22px;
-    font-weight: 400;
-    letter-spacing: 4px;
-    color: var(--white);
-  }
-  .topbar-logo span { color: var(--gold); }
-  .topbar-actions { display: flex; gap: 12px; align-items: center; }
-  .icon-btn {
-    width: 38px; height: 38px;
-    border-radius: 50%;
-    background: var(--navy3);
-    border: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-    font-size: 16px;
-    transition: all .2s;
-    position: relative;
-  }
-  .icon-btn:hover { border-color: var(--gold); }
-  .notif-dot {
-    position: absolute;
-    top: 6px; right: 6px;
-    width: 8px; height: 8px;
-    background: var(--gold);
-    border-radius: 50%;
-    border: 2px solid var(--navy);
-  }
-
-  /* ── PAGE SCROLL ── */
-  .page {
-    padding: 0 20px 100px;
-    overflow-y: auto;
-    min-height: calc(100vh - 80px);
-  }
-
-  /* ── GREETING ── */
-  .greeting {
-    margin-bottom: 24px;
-  }
-  .greeting-sub {
-    font-size: 12px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 4px;
-  }
-  .greeting-name {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 30px;
-    font-weight: 400;
-    color: var(--white);
-  }
-
-  /* ── BALANCE HERO ── */
-  .balance-hero {
-    background: linear-gradient(135deg, #1a2a4a 0%, #0d1a30 100%);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 28px 24px;
-    margin-bottom: 24px;
-    position: relative;
-    overflow: hidden;
-  }
-  .balance-hero::before {
-    content: 'Z';
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 180px;
-    font-weight: 300;
-    color: rgba(201,168,76,0.04);
-    position: absolute;
-    right: -20px; bottom: -40px;
-    line-height: 1;
-  }
-  .balance-label {
-    font-size: 11px;
-    letter-spacing: 2.5px;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 8px;
-  }
-  .balance-amount {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 44px;
-    font-weight: 300;
-    color: var(--white);
-    line-height: 1;
-    margin-bottom: 4px;
-  }
-  .balance-cents {
-    font-size: 24px;
-    color: var(--gold);
-  }
-  .balance-change {
-    font-size: 13px;
-    color: var(--green);
-    margin-top: 8px;
-  }
-  .balance-change.negative { color: var(--red); }
-
-  /* ── ACCOUNT PILLS ── */
-  .account-scroll {
-    display: flex;
-    gap: 12px;
-    overflow-x: auto;
-    margin-bottom: 28px;
-    padding-bottom: 4px;
-    scrollbar-width: none;
-  }
-  .account-scroll::-webkit-scrollbar { display: none; }
-  .account-pill {
-    min-width: 160px;
-    background: var(--navy3);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 16px;
-    cursor: pointer;
-    transition: all .2s;
-    flex-shrink: 0;
-  }
-  .account-pill.active {
-    border-color: var(--gold);
-    background: rgba(201,168,76,0.06);
-  }
-  .account-pill:hover { border-color: var(--gold); }
-  .pill-type {
-    font-size: 10px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 6px;
-  }
-  .pill-id {
-    font-size: 12px;
-    color: var(--gold);
-    margin-bottom: 8px;
-    font-family: monospace;
-  }
-  .pill-balance {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 20px;
-    font-weight: 500;
-    color: var(--white);
-  }
-  .pill-status {
-    display: inline-block;
-    margin-top: 6px;
-    padding: 2px 8px;
-    border-radius: 20px;
-    font-size: 10px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-  }
-  .pill-status.active { background: rgba(76,175,130,0.15); color: var(--green); }
-  .pill-status.suspended { background: rgba(224,82,82,0.15); color: var(--red); }
-
-  /* ── QUICK ACTIONS ── */
-  .section-title {
-    font-size: 11px;
-    letter-spacing: 2.5px;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 14px;
-  }
-  .quick-actions {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
-    margin-bottom: 28px;
-  }
-  .qa-btn {
-    background: var(--navy3);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 16px 8px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    transition: all .2s;
-    text-align: center;
-  }
-  .qa-btn:hover { border-color: var(--gold); background: rgba(201,168,76,0.05); }
-  .qa-icon { font-size: 22px; }
-  .qa-label {
-    font-size: 10px;
-    letter-spacing: .5px;
-    color: var(--muted);
-    line-height: 1.3;
-  }
-
-  /* ── TRANSACTIONS ── */
-  .txn-list { display: flex; flex-direction: column; gap: 2px; }
-  .txn-item {
-    background: var(--navy3);
-    border-radius: 12px;
-    padding: 14px 16px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    transition: background .15s;
-  }
-  .txn-item:hover { background: var(--navy4); }
-  .txn-icon {
-    width: 38px; height: 38px;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px;
-    flex-shrink: 0;
-  }
-  .txn-icon.dep { background: rgba(76,175,130,0.15); }
-  .txn-icon.wth { background: rgba(224,82,82,0.15); }
-  .txn-icon.xfr { background: rgba(201,168,76,0.15); }
-  .txn-icon.fee { background: rgba(138,149,168,0.15); }
-  .txn-details { flex: 1; min-width: 0; }
-  .txn-desc {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--white);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-bottom: 3px;
-  }
-  .txn-meta { font-size: 11px; color: var(--muted); }
-  .txn-amount {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 18px;
-    font-weight: 500;
-    flex-shrink: 0;
-  }
-  .txn-amount.credit { color: var(--green); }
-  .txn-amount.debit { color: var(--red); }
-
-  /* ── ALERTS ── */
-  .alert-card {
-    background: rgba(201,168,76,0.06);
-    border: 1px solid rgba(201,168,76,0.2);
-    border-radius: 14px;
-    padding: 14px 16px;
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-    margin-bottom: 10px;
-  }
-  .alert-card.danger {
-    background: rgba(224,82,82,0.06);
-    border-color: rgba(224,82,82,0.2);
-  }
-  .alert-icon { font-size: 18px; flex-shrink: 0; }
-  .alert-title { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
-  .alert-body { font-size: 12px; color: var(--muted); line-height: 1.5; }
-
-  /* ── FORM PAGES ── */
-  .page-title {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 32px;
-    font-weight: 300;
-    color: var(--white);
-    margin-bottom: 6px;
-  }
-  .page-subtitle {
-    font-size: 13px;
-    color: var(--muted);
-    margin-bottom: 28px;
-    line-height: 1.5;
-  }
-  .amount-display {
-    background: var(--navy3);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 24px;
-    text-align: center;
-    margin-bottom: 24px;
-  }
-  .amount-display .currency {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 18px;
-    color: var(--gold);
-    vertical-align: super;
-    margin-right: 4px;
-  }
-  .amount-display input {
-    background: none;
-    border: none;
-    outline: none;
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 52px;
-    font-weight: 300;
-    color: var(--white);
-    width: 180px;
-    text-align: center;
-    -moz-appearance: textfield;
-  }
-  .amount-display input::-webkit-outer-spin-button,
-  .amount-display input::-webkit-inner-spin-button { -webkit-appearance: none; }
-
-  .confirm-box {
-    background: var(--navy3);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 18px;
-    margin-bottom: 20px;
-  }
-  .confirm-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-    font-size: 13px;
-  }
-  .confirm-row:last-child { border-bottom: none; }
-  .confirm-row span:first-child { color: var(--muted); }
-  .confirm-row span:last-child { font-weight: 500; }
-
-  /* ── SUCCESS ── */
-  .success-screen {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 60px 28px;
-    text-align: center;
-    min-height: 60vh;
-  }
-  .success-ring {
-    width: 80px; height: 80px;
-    border-radius: 50%;
-    background: rgba(76,175,130,0.15);
-    border: 1px solid rgba(76,175,130,0.3);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 36px;
-    margin-bottom: 24px;
-  }
-  .success-title {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 28px;
-    font-weight: 400;
-    margin-bottom: 10px;
-  }
-  .success-sub { font-size: 14px; color: var(--muted); margin-bottom: 32px; }
-  .success-ref {
-    font-family: monospace;
-    font-size: 12px;
-    color: var(--gold);
-    background: var(--navy3);
-    padding: 8px 16px;
-    border-radius: 8px;
-    margin-bottom: 32px;
-    letter-spacing: 1px;
-  }
-
-  /* ── BOTTOM NAV ── */
-  .bottom-nav {
-    position: fixed;
-    bottom: 0; left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 430px;
-    background: rgba(10,15,30,0.95);
-    backdrop-filter: blur(20px);
-    border-top: 1px solid var(--border);
-    display: flex;
-    padding: 10px 0 24px;
-    z-index: 100;
-  }
-  .nav-item {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    padding: 6px 0;
-    cursor: pointer;
-    transition: color .2s;
-    color: var(--muted);
-    border: none;
-    background: none;
-  }
-  .nav-item.active { color: var(--gold); }
-  .nav-icon { font-size: 20px; }
-  .nav-label { font-size: 10px; letter-spacing: .5px; }
-
-  /* ── PROFILE PAGE ── */
-  .profile-avatar {
-    width: 72px; height: 72px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--gold), var(--navy4));
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 28px;
-    font-weight: 400;
-    color: var(--navy);
-    margin-bottom: 16px;
-    border: 2px solid var(--border);
-  }
-  .profile-name {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 26px;
-    font-weight: 400;
-    margin-bottom: 4px;
-  }
-  .profile-email { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
-
-  .settings-group { margin-bottom: 24px; }
-  .settings-item {
-    background: var(--navy3);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 15px 16px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 2px;
-    cursor: pointer;
-    transition: background .15s;
-  }
-  .settings-item:hover { background: var(--navy4); }
-  .settings-icon { font-size: 18px; width: 24px; text-align: center; }
-  .settings-label { flex: 1; font-size: 14px; }
-  .settings-arrow { color: var(--muted); font-size: 12px; }
-  .settings-value { font-size: 13px; color: var(--muted); }
-
-  /* ── STATUS TAGS ── */
-  .tag {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 20px;
-    font-size: 11px;
-    letter-spacing: .5px;
-    text-transform: uppercase;
-  }
-  .tag-pending { background: rgba(201,168,76,0.15); color: var(--gold); }
-  .tag-approved { background: rgba(76,175,130,0.15); color: var(--green); }
-  .tag-rejected { background: rgba(224,82,82,0.15); color: var(--red); }
-
-  /* ── BATCH INDICATOR ── */
-  .batch-bar {
-    background: rgba(201,168,76,0.06);
-    border: 1px solid rgba(201,168,76,0.15);
-    border-radius: 10px;
-    padding: 10px 14px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 20px;
-    font-size: 12px;
-    color: var(--gold);
-  }
-  .batch-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--gold);
-    animation: pulse 2s infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: .3; }
-  }
-
-  /* ── LOADING ── */
-  .spinner {
-    width: 20px; height: 20px;
-    border: 2px solid rgba(255,255,255,.1);
-    border-top-color: var(--gold);
-    border-radius: 50%;
-    animation: spin .6s linear infinite;
-    display: inline-block;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  .divider {
-    height: 1px;
-    background: var(--border);
-    margin: 20px 0;
-  }
-
-  .back-btn {
-    background: none;
-    border: none;
-    color: var(--gold);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    cursor: pointer;
-    padding: 0;
-    margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
+    --navy: #0a0f1e; --navy2: #111827; --navy3: #1c2535; --navy4: #243044;
+    --gold: #c9a84c; --gold2: #e8c97a; --gold3: #f5e6b8;
+    --white: #f8f6f1; --muted: #8a95a8; --red: #e05252; --green: #4caf82;
+    --border: rgba(201,168,76,0.15); --glass: rgba(255,255,255,0.04);
+  }
+  body { font-family:'DM Sans',sans-serif; background:var(--navy); color:var(--white); min-height:100vh; -webkit-font-smoothing:antialiased; }
+  .app { max-width:430px; margin:0 auto; min-height:100vh; background:var(--navy); position:relative; }
+  .auth-screen { min-height:100vh; display:flex; flex-direction:column; }
+  .auth-hero { background:linear-gradient(160deg,#0d1529 0%,#1a2540 60%,#0a0f1e 100%); padding:72px 32px 48px; position:relative; overflow:hidden; }
+  .auth-hero::before { content:''; position:absolute; top:-60px; right:-60px; width:240px; height:240px; border-radius:50%; border:1px solid rgba(201,168,76,0.12); }
+  .auth-logo { font-family:'Cormorant Garamond',serif; font-size:38px; font-weight:300; letter-spacing:6px; color:var(--white); margin-bottom:8px; }
+  .auth-logo span { color:var(--gold); }
+  .auth-tagline { font-size:12px; letter-spacing:3px; color:var(--muted); text-transform:uppercase; }
+  .auth-body { padding:36px 28px; flex:1; }
+  .auth-tabs { display:flex; background:var(--navy3); border-radius:12px; padding:4px; margin-bottom:28px; }
+  .auth-tab { flex:1; padding:10px; border:none; background:none; color:var(--muted); font-family:'DM Sans',sans-serif; font-size:14px; font-weight:500; border-radius:9px; cursor:pointer; transition:all .2s; }
+  .auth-tab.active { background:var(--gold); color:var(--navy); }
+  .lang-toggle { display:flex; gap:6px; position:absolute; top:20px; right:20px; }
+  .lang-btn { background:var(--navy3); border:1px solid var(--border); color:var(--muted); border-radius:8px; padding:4px 10px; font-size:11px; font-weight:500; cursor:pointer; transition:all .2s; font-family:'DM Sans',sans-serif; }
+  .lang-btn.active { background:var(--gold); color:var(--navy); border-color:var(--gold); }
+  .field { margin-bottom:16px; }
+  .field label { display:block; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+  .field input, .field select { width:100%; background:var(--navy3); border:1px solid var(--border); border-radius:10px; padding:14px 16px; color:var(--white); font-family:'DM Sans',sans-serif; font-size:15px; outline:none; transition:border-color .2s; -webkit-appearance:none; }
+  .field input:focus, .field select:focus { border-color:var(--gold); }
+  .field select option { background:var(--navy2); }
+  .error-msg { background:rgba(224,82,82,0.1); border:1px solid rgba(224,82,82,0.25); border-radius:10px; padding:12px 14px; font-size:13px; color:var(--red); margin-bottom:14px; }
+  .success-msg { background:rgba(76,175,130,0.1); border:1px solid rgba(76,175,130,0.25); border-radius:10px; padding:12px 14px; font-size:13px; color:var(--green); margin-bottom:14px; }
+  .btn-primary { width:100%; background:var(--gold); color:var(--navy); border:none; border-radius:12px; padding:16px; font-family:'DM Sans',sans-serif; font-size:15px; font-weight:500; letter-spacing:1px; cursor:pointer; transition:all .2s; margin-top:8px; display:flex; align-items:center; justify-content:center; gap:8px; }
+  .btn-primary:hover { background:var(--gold2); transform:translateY(-1px); }
+  .btn-primary:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+  .btn-ghost { background:transparent; border:1px solid var(--border); color:var(--white); border-radius:12px; padding:14px 20px; font-family:'DM Sans',sans-serif; font-size:14px; cursor:pointer; transition:all .2s; width:100%; }
+  .btn-ghost:hover { border-color:var(--gold); color:var(--gold); }
+  .btn-sm { background:var(--gold); color:var(--navy); border:none; border-radius:8px; padding:10px 18px; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; transition:all .2s; }
+  .btn-sm:hover { background:var(--gold2); }
+  .btn-danger { background:rgba(224,82,82,0.1); border:1px solid rgba(224,82,82,0.25); color:var(--red); border-radius:10px; padding:14px 18px; font-family:'DM Sans',sans-serif; font-size:14px; cursor:pointer; transition:all .2s; width:100%; margin-top:8px; }
+  .topbar { padding:52px 24px 16px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; background:var(--navy); z-index:10; }
+  .topbar-logo { font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:400; letter-spacing:4px; color:var(--white); }
+  .topbar-logo span { color:var(--gold); }
+  .topbar-actions { display:flex; gap:10px; align-items:center; }
+  .icon-btn { width:36px; height:36px; border-radius:50%; background:var(--navy3); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:15px; transition:all .2s; position:relative; }
+  .icon-btn:hover { border-color:var(--gold); }
+  .notif-dot { position:absolute; top:5px; right:5px; width:8px; height:8px; background:var(--gold); border-radius:50%; border:2px solid var(--navy); }
+  .page { padding:0 20px 100px; overflow-y:auto; min-height:calc(100vh - 80px); }
+  .greeting { margin-bottom:20px; }
+  .greeting-sub { font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
+  .greeting-name { font-family:'Cormorant Garamond',serif; font-size:30px; font-weight:400; color:var(--white); }
+  .balance-hero { background:linear-gradient(135deg,#1a2a4a 0%,#0d1a30 100%); border:1px solid var(--border); border-radius:20px; padding:28px 24px; margin-bottom:20px; position:relative; overflow:hidden; }
+  .balance-hero::before { content:'Z'; font-family:'Cormorant Garamond',serif; font-size:180px; font-weight:300; color:rgba(201,168,76,0.04); position:absolute; right:-20px; bottom:-40px; line-height:1; pointer-events:none; }
+  .balance-label { font-size:11px; letter-spacing:2.5px; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+  .balance-amount { font-family:'Cormorant Garamond',serif; font-size:44px; font-weight:300; color:var(--white); line-height:1; margin-bottom:4px; }
+  .balance-cents { font-size:24px; color:var(--gold); }
+  .account-scroll { display:flex; gap:12px; overflow-x:auto; margin-bottom:24px; padding-bottom:4px; scrollbar-width:none; }
+  .account-scroll::-webkit-scrollbar { display:none; }
+  .account-pill { min-width:160px; background:var(--navy3); border:1px solid var(--border); border-radius:14px; padding:16px; cursor:pointer; transition:all .2s; flex-shrink:0; }
+  .account-pill.active { border-color:var(--gold); background:rgba(201,168,76,0.06); }
+  .account-pill:hover { border-color:var(--gold); }
+  .pill-type { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+  .pill-id { font-size:12px; color:var(--gold); margin-bottom:8px; font-family:monospace; }
+  .pill-balance { font-family:'Cormorant Garamond',serif; font-size:20px; font-weight:500; }
+  .pill-status { display:inline-block; margin-top:6px; padding:2px 8px; border-radius:20px; font-size:10px; letter-spacing:1px; text-transform:uppercase; }
+  .pill-status.active-s { background:rgba(76,175,130,0.15); color:var(--green); }
+  .pill-status.suspended-s { background:rgba(224,82,82,0.15); color:var(--red); }
+  .section-title { font-size:11px; letter-spacing:2.5px; text-transform:uppercase; color:var(--muted); margin-bottom:14px; }
+  .quick-actions { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:24px; }
+  .qa-btn { background:var(--navy3); border:1px solid var(--border); border-radius:14px; padding:16px 8px; display:flex; flex-direction:column; align-items:center; gap:8px; cursor:pointer; transition:all .2s; }
+  .qa-btn:hover { border-color:var(--gold); background:rgba(201,168,76,0.05); }
+  .qa-icon { font-size:22px; }
+  .qa-label { font-size:10px; color:var(--muted); text-align:center; }
+  .txn-list { display:flex; flex-direction:column; gap:2px; }
+  .txn-item { background:var(--navy3); border-radius:12px; padding:14px 16px; display:flex; align-items:center; gap:14px; }
+  .txn-item:hover { background:var(--navy4); }
+  .txn-icon { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+  .txn-icon.dep { background:rgba(76,175,130,0.15); }
+  .txn-icon.wth { background:rgba(224,82,82,0.15); }
+  .txn-icon.xfr { background:rgba(201,168,76,0.15); }
+  .txn-icon.fee { background:rgba(138,149,168,0.15); }
+  .txn-details { flex:1; min-width:0; }
+  .txn-desc { font-size:14px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:3px; }
+  .txn-meta { font-size:11px; color:var(--muted); }
+  .txn-amount { font-family:'Cormorant Garamond',serif; font-size:18px; font-weight:500; flex-shrink:0; }
+  .txn-amount.credit { color:var(--green); }
+  .txn-amount.debit { color:var(--red); }
+  .alert-card { background:rgba(201,168,76,0.06); border:1px solid rgba(201,168,76,0.2); border-radius:14px; padding:14px 16px; display:flex; gap:12px; align-items:flex-start; margin-bottom:10px; }
+  .alert-card.danger { background:rgba(224,82,82,0.06); border-color:rgba(224,82,82,0.2); }
+  .alert-title { font-size:13px; font-weight:500; margin-bottom:2px; }
+  .alert-body { font-size:12px; color:var(--muted); line-height:1.5; }
+  .page-title { font-family:'Cormorant Garamond',serif; font-size:32px; font-weight:300; color:var(--white); margin-bottom:6px; }
+  .page-subtitle { font-size:13px; color:var(--muted); margin-bottom:24px; line-height:1.5; }
+  .amount-display { background:var(--navy3); border:1px solid var(--border); border-radius:16px; padding:24px; text-align:center; margin-bottom:24px; }
+  .amount-display .currency { font-family:'Cormorant Garamond',serif; font-size:18px; color:var(--gold); vertical-align:super; margin-right:4px; }
+  .amount-input { background:none; border:none; outline:none; font-family:'Cormorant Garamond',serif; font-size:52px; font-weight:300; color:var(--white); width:180px; text-align:center; -moz-appearance:textfield; }
+  .amount-input::-webkit-outer-spin-button, .amount-input::-webkit-inner-spin-button { -webkit-appearance:none; }
+  .confirm-box { background:var(--navy3); border:1px solid var(--border); border-radius:14px; padding:18px; margin-bottom:20px; }
+  .confirm-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05); font-size:13px; }
+  .confirm-row:last-child { border-bottom:none; }
+  .confirm-row span:first-child { color:var(--muted); }
+  .success-screen { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 28px; text-align:center; min-height:60vh; }
+  .success-ring { width:80px; height:80px; border-radius:50%; background:rgba(76,175,130,0.15); border:1px solid rgba(76,175,130,0.3); display:flex; align-items:center; justify-content:center; font-size:36px; margin-bottom:24px; }
+  .success-title { font-family:'Cormorant Garamond',serif; font-size:28px; font-weight:400; margin-bottom:10px; }
+  .success-sub { font-size:14px; color:var(--muted); margin-bottom:16px; }
+  .success-ref { font-family:monospace; font-size:12px; color:var(--gold); background:var(--navy3); padding:8px 16px; border-radius:8px; margin-bottom:24px; }
+  .bottom-nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:430px; background:rgba(10,15,30,0.96); backdrop-filter:blur(20px); border-top:1px solid var(--border); display:flex; padding:10px 0 24px; z-index:100; }
+  .nav-item { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; padding:6px 0; cursor:pointer; color:var(--muted); border:none; background:none; transition:color .2s; }
+  .nav-item.active { color:var(--gold); }
+  .nav-icon { font-size:20px; }
+  .nav-label { font-size:10px; letter-spacing:.5px; }
+  .profile-avatar { width:72px; height:72px; border-radius:50%; background:linear-gradient(135deg,var(--gold),var(--navy4)); display:flex; align-items:center; justify-content:center; font-family:'Cormorant Garamond',serif; font-size:28px; font-weight:400; color:var(--navy); margin:0 auto 16px; border:2px solid var(--border); }
+  .profile-name { font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:400; margin-bottom:4px; text-align:center; }
+  .profile-email { font-size:13px; color:var(--muted); margin-bottom:24px; text-align:center; }
+  .settings-item { background:var(--navy3); border:1px solid var(--border); border-radius:12px; padding:15px 16px; display:flex; align-items:center; gap:14px; margin-bottom:2px; cursor:pointer; transition:background .15s; }
+  .settings-item:hover { background:var(--navy4); }
+  .settings-icon { font-size:18px; width:24px; text-align:center; }
+  .settings-label { flex:1; font-size:14px; }
+  .settings-arrow { color:var(--muted); font-size:12px; }
+  .settings-value { font-size:13px; color:var(--muted); }
+  .batch-bar { background:rgba(201,168,76,0.06); border:1px solid rgba(201,168,76,0.15); border-radius:10px; padding:10px 14px; display:flex; align-items:center; gap:10px; margin-bottom:20px; font-size:12px; color:var(--gold); }
+  .batch-dot { width:8px; height:8px; border-radius:50%; background:var(--gold); animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .spinner { width:18px; height:18px; border:2px solid rgba(255,255,255,.1); border-top-color:var(--gold); border-radius:50%; animation:spin .6s linear infinite; display:inline-block; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .divider { height:1px; background:var(--border); margin:20px 0; }
+  .back-btn { background:none; border:none; color:var(--gold); font-family:'DM Sans',sans-serif; font-size:14px; cursor:pointer; padding:0; margin-bottom:20px; display:flex; align-items:center; gap:6px; }
+  .tag { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; letter-spacing:.5px; text-transform:uppercase; }
+  .tag-pending { background:rgba(201,168,76,0.15); color:var(--gold); }
+  .tag-approved { background:rgba(76,175,130,0.15); color:var(--green); }
+  .tag-rejected { background:rgba(224,82,82,0.15); color:var(--red); }
+  .sub-screen { padding:20px 0; }
+  .toggle-row { display:flex; align-items:center; justify-content:space-between; padding:14px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
+  .toggle-row:last-child { border-bottom:none; }
+  .toggle-label { font-size:14px; }
+  .toggle-sub { font-size:11px; color:var(--muted); margin-top:2px; }
+  .toggle { width:44px; height:24px; border-radius:12px; background:var(--navy4); border:1px solid var(--border); position:relative; cursor:pointer; transition:background .2s; flex-shrink:0; }
+  .toggle.on { background:var(--gold); border-color:var(--gold); }
+  .toggle::after { content:''; position:absolute; width:18px; height:18px; background:var(--white); border-radius:50%; top:2px; left:2px; transition:left .2s; }
+  .toggle.on::after { left:22px; }
+  .link-row { display:flex; gap:10px; align-items:center; }
+  .acct-tag { background:var(--navy3); border:1px solid var(--border); border-radius:8px; padding:6px 12px; font-family:monospace; font-size:12px; color:var(--gold); display:flex; align-items:center; gap:8px; }
+  .acct-tag button { background:none; border:none; color:var(--muted); cursor:pointer; font-size:14px; padding:0; }
+  .acct-tag button:hover { color:var(--red); }
 `;
 
-// ─── MOCK DATA ─────────────────────────────────────────────────────────────────
-const MOCK_ACCOUNTS = [
-  { id: "ZNT-001042", name: "MARCK PIERRE",    type: "CHECKING", balance: 18473.30, status: "A", overdraftLimit: 500.00 },
-  { id: "ZNT-001043", name: "MARCK PIERRE",    type: "SAVINGS",  balance: 52000.00, status: "A", overdraftLimit: 0 },
-  { id: "ZNT-001098", name: "MARCK PIERRE",    type: "CHECKING", balance: -124.50,  status: "A", overdraftLimit: 500.00 },
-];
-
-const MOCK_TXNS = [
-  { id: "T001", date: "2026-03-07", type: "DEP", desc: "DIRECT DEPOSIT PAYROLL", amount: 3750.00, acct: "ZNT-001042", status: "APR" },
-  { id: "T002", date: "2026-03-06", type: "WTH", desc: "ONLINE PURCHASE AMAZON", amount: 124.99,  acct: "ZNT-001042", status: "APR" },
-  { id: "T003", date: "2026-03-06", type: "XFR", desc: "TRANSFER TO SAVINGS",    amount: 500.00,  acct: "ZNT-001042", status: "APR" },
-  { id: "T004", date: "2026-03-05", type: "DEP", desc: "MOBILE CHECK DEPOSIT",  amount: 250.00,  acct: "ZNT-001043", status: "PND" },
-  { id: "T005", date: "2026-03-05", type: "FEE", desc: "MONTHLY MAINTENANCE",   amount: 12.00,   acct: "ZNT-001042", status: "APR" },
-  { id: "T006", date: "2026-03-04", type: "WTH", desc: "ATM WITHDRAWAL",        amount: 200.00,  acct: "ZNT-001042", status: "APR" },
-  { id: "T007", date: "2026-03-03", type: "DEP", desc: "INTEREST CREDIT",       amount: 18734.90,acct: "ZNT-001043", status: "APR" },
-];
-
-// ─── HELPERS ───────────────────────────────────────────────────────────────────
-const fmt = (n) => new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.abs(n));
-const fmtFull = (n) => `${n < 0 ? "-" : ""}$${fmt(n)}`;
-const genId = () => "ZNT-" + Math.floor(100000 + Math.random() * 900000);
-const genRef = () => "ZB" + Date.now().toString().slice(-8).toUpperCase();
-
-const txnIcon = (type) => ({ DEP: "↓", WTH: "↑", XFR: "⇄", FEE: "●" }[type] || "●");
-const txnClass = (type) => ({ DEP: "dep", WTH: "wth", XFR: "xfr", FEE: "fee" }[type] || "fee");
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+const fmt = (n) => new Intl.NumberFormat("en-US", { minimumFractionDigits:2, maximumFractionDigits:2 }).format(Math.abs(n));
+const fmtFull = (n) => `${n < 0 ? "-" : ""}${fmt(n)}`;
+const txnIcon = (type) => ({ DEP:"↓", WTH:"↑", WDR:"↑", XFR:"⇄", FEE:"●" }[type] || "●");
+const txnClass = (type) => ({ DEP:"dep", WTH:"wth", WDR:"wth", XFR:"xfr", FEE:"fee" }[type] || "fee");
 const isCredit = (type) => type === "DEP";
+const greeting = (t) => {
+  const h = new Date().getHours();
+  return h < 12 ? t.goodMorning : h < 17 ? t.goodAfternoon : t.goodEvening;
+};
+const getToken = () => localStorage.getItem("zntr_token");
+const setToken = (tok) => tok ? localStorage.setItem("zntr_token", tok) : localStorage.removeItem("zntr_token");
 
-// ─── API LAYER ─────────────────────────────────────────────────────────────────
-// Uses /api prefix — Vite proxy (dev) and nginx (prod) route to FastAPI on :8000
+// ─── API ──────────────────────────────────────────────────────────────────────
 const BASE_URL = "/api";
 
-async function apiFetch(path, options = {}) {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
+async function apiFetch(path, options = {}, token = null) {
+  const headers = { "Content-Type": "application/json" };
+  const t = token || getToken();
+  if (t) headers["Authorization"] = `Bearer ${t}`;
+  const res = await fetch(`${BASE_URL}${path}`, { headers, ...options });
+  if (res.status === 401) {
+    setToken(null);
+    throw new Error("SESSION_EXPIRED");
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail || `API error ${res.status}`);
   }
+  if (res.headers.get("content-type")?.includes("text/csv")) return res;
   return res.json();
 }
 
 const api = {
-  async getAccounts() {
-    try {
-      const data = await apiFetch("/accounts");
-      return data.accounts;
-    } catch {
-      return MOCK_ACCOUNTS;
-    }
+  register: (email, name, password, language) =>
+    apiFetch("/auth/register", { method:"POST", body: JSON.stringify({ email, name, password, language }) }),
+  login: (email, password) =>
+    apiFetch("/auth/login", { method:"POST", body: JSON.stringify({ email, password }) }),
+  logout: () => apiFetch("/auth/logout", { method:"POST" }),
+  getMe: () => apiFetch("/auth/me"),
+  updateMe: (fields) => apiFetch("/auth/me", { method:"PATCH", body: JSON.stringify(fields) }),
+  changePassword: (old_password, new_password) =>
+    apiFetch("/auth/change-password", { method:"POST", body: JSON.stringify({ old_password, new_password }) }),
+  updateNotifications: (prefs) =>
+    apiFetch("/auth/notifications", { method:"PATCH", body: JSON.stringify(prefs) }),
+  getAccounts: () => apiFetch("/accounts"),
+  getTransactions: (accountId) => {
+    const q = accountId ? `?account_id=${accountId}&limit=50` : "?limit=50";
+    return apiFetch(`/transactions/ledger${q}`);
   },
-
-  async getTransactions(accountId) {
-    try {
-      const query = accountId ? `?account_id=${accountId}&limit=50` : "?limit=50";
-      const data = await apiFetch(`/transactions/ledger${query}`);
-      return data.transactions.map(t => ({
-        id:     `${t.account_id}-${t.date}-${Math.random().toString(36).slice(2,6)}`,
-        date:   t.date,
-        type:   t.type === "WDR" ? "WTH" : t.type,
-        desc:   t.description,
-        amount: t.amount,
-        acct:   t.account_id,
-        status: t.status,
-      }));
-    } catch {
-      return MOCK_TXNS.filter(t => t.acct === accountId || !accountId);
-    }
-  },
-
-  async deposit(accountId, amount, desc) {
-    return apiFetch("/transactions/deposit", {
-      method: "POST",
-      body: JSON.stringify({
-        account_id: accountId,
-        amount: parseFloat(amount),
-        description: desc || "PORTAL DEPOSIT",
-      }),
-    });
-  },
-
-  async withdraw(accountId, amount, desc) {
-    return apiFetch("/transactions/withdraw", {
-      method: "POST",
-      body: JSON.stringify({
-        account_id: accountId,
-        amount: parseFloat(amount),
-        description: desc || "PORTAL WITHDRAWAL",
-      }),
-    });
-  },
-
-  async transfer(fromId, toId, amount, desc) {
-    return apiFetch("/transactions/transfer", {
-      method: "POST",
-      body: JSON.stringify({
-        from_account_id: fromId,
-        to_account_id: toId,
-        amount: parseFloat(amount),
-        description: desc || "PORTAL TRANSFER",
-      }),
-    });
-  },
-
-  async createAccount(data) {
-    return apiFetch("/accounts", {
-      method: "POST",
-      body: JSON.stringify({
-        name: data.ownerName || "ZENTRA CLIENT",
-        type: data.type,
-      }),
-    });
-  },
-
-  async closeAccount(accountId) {
-    return apiFetch(`/accounts/${accountId}`, { method: "DELETE" });
-  },
+  deposit: (account_id, amount, description) =>
+    apiFetch("/transactions/deposit", { method:"POST", body: JSON.stringify({ account_id, amount: parseFloat(amount), description }) }),
+  withdraw: (account_id, amount, description) =>
+    apiFetch("/transactions/withdraw", { method:"POST", body: JSON.stringify({ account_id, amount: parseFloat(amount), description }) }),
+  transfer: (from_account_id, to_account_id, amount, description) =>
+    apiFetch("/transactions/transfer", { method:"POST", body: JSON.stringify({ from_account_id, to_account_id, amount: parseFloat(amount), description }) }),
+  createAccount: (name, type) =>
+    apiFetch("/accounts", { method:"POST", body: JSON.stringify({ name, type }) }),
+  closeAccount: (account_id) =>
+    apiFetch(`/accounts/${account_id}`, { method:"DELETE" }),
+  linkAccount: (account_id) =>
+    apiFetch("/auth/accounts/link", { method:"POST", body: JSON.stringify({ account_id }) }),
+  unlinkAccount: (account_id) =>
+    apiFetch(`/auth/accounts/${account_id}/unlink`, { method:"DELETE" }),
+  downloadStatement: (account_id) =>
+    apiFetch(`/auth/statement${account_id ? `?account_id=${account_id}` : ""}`),
 };
 
-// ─── COMPONENTS ────────────────────────────────────────────────────────────────
-
-function AuthScreen({ onLogin }) {
+// ─── AUTH SCREEN ─────────────────────────────────────────────────────────────
+function AuthScreen({ onLogin, lang, setLang, t }) {
   const [tab, setTab] = useState("login");
+  const [form, setForm] = useState({ email:"", password:"", name:"", confirmPw:"" });
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ email: "", password: "", name: "", confirmPassword: "" });
+  const [error, setError] = useState("");
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const handle = async () => {
+    setError("");
+    if (!form.email || !form.password) { setError(t.fieldRequired); return; }
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1000));
-    onLogin({ name: form.name || "Marck Pierre", email: form.email || "marck@zentra.bank" });
+    try {
+      if (tab === "login") {
+        const res = await api.login(form.email, form.password);
+        setToken(res.token);
+        onLogin(res.user, res.token);
+      } else {
+        if (!form.name) { setError(t.fieldRequired); setLoading(false); return; }
+        const res = await api.register(form.email, form.name, form.password, lang);
+        setToken(res.token);
+        onLogin(res.user, res.token);
+      }
+    } catch (e) {
+      setError(e.message === "Email already registered" ? t.registerError : e.message || t.loginError);
+    }
     setLoading(false);
   };
-
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   return (
     <div className="auth-screen">
-      <div className="auth-hero">
+      <div className="auth-hero" style={{ position:"relative" }}>
+        <div className="lang-toggle">
+          <button className={`lang-btn ${lang === "en" ? "active" : ""}`} onClick={() => setLang("en")}>EN</button>
+          <button className={`lang-btn ${lang === "fr" ? "active" : ""}`} onClick={() => setLang("fr")}>FR</button>
+        </div>
         <div className="auth-logo">ZENTR<span>A</span></div>
-        <div className="auth-tagline">Private Banking Platform</div>
+        <div className="auth-tagline">{t.tagline}</div>
       </div>
       <div className="auth-body">
         <div className="auth-tabs">
-          <button className={`auth-tab ${tab === "login" ? "active" : ""}`} onClick={() => setTab("login")}>Sign In</button>
-          <button className={`auth-tab ${tab === "register" ? "active" : ""}`} onClick={() => setTab("register")}>Open Account</button>
+          <button className={`auth-tab ${tab === "login" ? "active" : ""}`} onClick={() => { setTab("login"); setError(""); }}>{t.signIn}</button>
+          <button className={`auth-tab ${tab === "register" ? "active" : ""}`} onClick={() => { setTab("register"); setError(""); }}>{t.openAccount}</button>
         </div>
-
-        {tab === "login" ? (
-          <>
-            <div className="field">
-              <label>Email Address</label>
-              <input type="email" placeholder="you@zentra.bank" value={form.email} onChange={e => set("email", e.target.value)} />
-            </div>
-            <div className="field">
-              <label>Password</label>
-              <input type="password" placeholder="••••••••" value={form.password} onChange={e => set("password", e.target.value)} />
-            </div>
-            <button className="btn-primary" onClick={handle} disabled={loading}>
-              {loading ? <span className="spinner" /> : "Sign In"}
-            </button>
-          </>
-        ) : (
-          <>
-            <div className="field">
-              <label>Full Name</label>
-              <input type="text" placeholder="Your full name" value={form.name} onChange={e => set("name", e.target.value)} />
-            </div>
-            <div className="field">
-              <label>Email Address</label>
-              <input type="email" placeholder="you@zentra.bank" value={form.email} onChange={e => set("email", e.target.value)} />
-            </div>
-            <div className="field">
-              <label>Password</label>
-              <input type="password" placeholder="Min 8 characters" value={form.password} onChange={e => set("password", e.target.value)} />
-            </div>
-            <button className="btn-primary" onClick={handle} disabled={loading}>
-              {loading ? <span className="spinner" /> : "Create Account"}
-            </button>
-          </>
+        {error && <div className="error-msg">{error}</div>}
+        {tab === "register" && (
+          <div className="field">
+            <label>{t.name}</label>
+            <input type="text" placeholder="Marck Pierre" value={form.name} onChange={e => set("name", e.target.value)} />
+          </div>
         )}
+        <div className="field">
+          <label>{t.email}</label>
+          <input type="email" placeholder="you@zentra.bank" value={form.email} onChange={e => set("email", e.target.value)} />
+        </div>
+        <div className="field">
+          <label>{t.password}</label>
+          <input type="password" placeholder={tab === "register" ? t.minPw : "••••••••"} value={form.password} onChange={e => set("password", e.target.value)}
+            onKeyDown={e => e.key === "Enter" && handle()} />
+        </div>
+        <button className="btn-primary" onClick={handle} disabled={loading}>
+          {loading ? <><span className="spinner" /> {tab === "login" ? t.signingIn : t.creating}</> : (tab === "login" ? t.signIn : t.openAccount)}
+        </button>
       </div>
     </div>
   );
 }
 
-function Dashboard({ user, accounts, transactions, onNav, onSelectAccount, selectedAccount }) {
-  const totalBalance = accounts.reduce((s, a) => s + a.balance, 0);
-  const activeAccount = selectedAccount || accounts[0];
-  const recentTxns = transactions.slice(0, 4);
-  const alerts = accounts.filter(a => a.balance < 0 || a.balance < 200);
-
-  return (
-    <div className="page">
-      <div className="greeting">
-        <div className="greeting-sub">Good morning</div>
-        <div className="greeting-name">{user.name.split(" ")[0]}</div>
-      </div>
-
-      {alerts.length > 0 && (
-        <>
-          <p className="section-title">Alerts</p>
-          {accounts.filter(a => a.balance < 0).map(a => (
-            <div key={a.id} className="alert-card danger">
-              <div className="alert-icon">⚠️</div>
-              <div>
-                <div className="alert-title">Overdraft — {a.id}</div>
-                <div className="alert-body">Balance is {fmtFull(a.balance)}. Overdraft fee may apply.</div>
-              </div>
-            </div>
-          ))}
-          {accounts.filter(a => a.balance >= 0 && a.balance < 200).map(a => (
-            <div key={a.id} className="alert-card">
-              <div className="alert-icon">💛</div>
-              <div>
-                <div className="alert-title">Low Balance — {a.id}</div>
-                <div className="alert-body">Balance is {fmtFull(a.balance)}. Consider a deposit.</div>
-              </div>
-            </div>
-          ))}
-        </>
-      )}
-
-      <div className="balance-hero">
-        <div className="balance-label">Total Portfolio</div>
-        <div className="balance-amount">
-          <span style={{ fontSize: 22, color: "var(--gold)", verticalAlign: "super", marginRight: 4 }}>$</span>
-          {fmt(totalBalance).split(".")[0]}
-          <span className="balance-cents">.{fmt(totalBalance).split(".")[1]}</span>
-        </div>
-        <div className={`balance-change ${totalBalance < 0 ? "negative" : ""}`}>
-          ↑ $18,734.90 interest credited last cycle
-        </div>
-      </div>
-
-      <div className="batch-bar">
-        <div className="batch-dot" />
-        <span>Nightly batch reconciliation runs at 22:00 EST</span>
-      </div>
-
-      <p className="section-title">Accounts</p>
-      <div className="account-scroll">
-        {accounts.map(a => (
-          <div key={a.id} className={`account-pill ${activeAccount?.id === a.id ? "active" : ""}`}
-               onClick={() => onSelectAccount(a)}>
-            <div className="pill-type">{a.type}</div>
-            <div className="pill-id">{a.id}</div>
-            <div className="pill-balance" style={{ color: a.balance < 0 ? "var(--red)" : "var(--white)" }}>
-              {fmtFull(a.balance)}
-            </div>
-            <span className={`pill-status ${a.status === "A" ? "active" : "suspended"}`}>
-              {a.status === "A" ? "Active" : "Suspended"}
-            </span>
-          </div>
-        ))}
-        <div className="account-pill" style={{ borderStyle: "dashed", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
-             onClick={() => onNav("new-account")}>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 24, marginBottom: 6 }}>+</div>
-            <div style={{ fontSize: 11, color: "var(--muted)" }}>New Account</div>
-          </div>
-        </div>
-      </div>
-
-      <p className="section-title">Quick Actions</p>
-      <div className="quick-actions">
-        {[
-          { icon: "↓", label: "Deposit",  nav: "deposit" },
-          { icon: "↑", label: "Withdraw", nav: "withdraw" },
-          { icon: "⇄", label: "Transfer", nav: "transfer" },
-          { icon: "📄", label: "History", nav: "history" },
-        ].map(q => (
-          <div key={q.nav} className="qa-btn" onClick={() => onNav(q.nav)}>
-            <div className="qa-icon">{q.icon}</div>
-            <div className="qa-label">{q.label}</div>
-          </div>
-        ))}
-      </div>
-
-      <p className="section-title">Recent Transactions</p>
-      <div className="txn-list">
-        {recentTxns.map(t => (
-          <div key={t.id} className="txn-item">
-            <div className={`txn-icon ${txnClass(t.type)}`}>{txnIcon(t.type)}</div>
-            <div className="txn-details">
-              <div className="txn-desc">{t.desc}</div>
-              <div className="txn-meta">{t.date} · <span className={`tag tag-${t.status === "APR" ? "approved" : t.status === "PND" ? "pending" : "rejected"}`}>{t.status}</span></div>
-            </div>
-            <div className={`txn-amount ${isCredit(t.type) ? "credit" : "debit"}`}>
-              {isCredit(t.type) ? "+" : "-"}${fmt(t.amount)}
-            </div>
-          </div>
-        ))}
-      </div>
-      <button className="btn-ghost" style={{ width: "100%", marginTop: 12 }} onClick={() => onNav("history")}>View All Transactions</button>
-    </div>
-  );
-}
-
-function DepositPage({ accounts, onBack, onSuccess }) {
+// ─── TRANSACTION FLOW (shared confirm→success pattern) ───────────────────────
+function TxnFlow({ t, accounts, onBack, mode }) {
   const [amount, setAmount] = useState("");
   const [acctId, setAcctId] = useState(accounts[0]?.id || "");
-  const [desc, setDesc] = useState("MOBILE DEPOSIT");
-  const [step, setStep] = useState("form"); // form | confirm | success
-  const [loading, setLoading] = useState(false);
-  const [ref, setRef] = useState("");
-
-  const submit = async () => {
-    if (step === "form") { setStep("confirm"); return; }
-    setLoading(true);
-    const res = await api.deposit(acctId, parseFloat(amount), desc);
-    setRef(res.reference);
-    setStep("success");
-    setLoading(false);
-    onSuccess && onSuccess();
-  };
-
-  if (step === "success") return (
-    <div className="page">
-      <div className="success-screen">
-        <div className="success-ring">✓</div>
-        <div className="success-title">Deposit Successful</div>
-        <div className="success-sub">${fmt(parseFloat(amount))} deposited to {acctId}</div>
-        <div className="success-ref">REF: {ref}</div>
-        <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 24 }}>
-          Funds available immediately. Reflected in nightly batch at 22:00 EST.
-        </div>
-        <button className="btn-primary" onClick={onBack}>Back to Dashboard</button>
-      </div>
-    </div>
+  const [toAcctId, setToAcctId] = useState(accounts[1]?.id || accounts[0]?.id || "");
+  const [desc, setDesc] = useState(
+    mode === "deposit" ? "PORTAL DEPOSIT" : mode === "withdraw" ? "PORTAL WITHDRAWAL" : "PORTAL TRANSFER"
   );
-
-  return (
-    <div className="page">
-      <button className="back-btn" onClick={step === "confirm" ? () => setStep("form") : onBack}>← {step === "confirm" ? "Edit" : "Back"}</button>
-      <div className="page-title">{step === "form" ? "Deposit Funds" : "Confirm Deposit"}</div>
-      <div className="page-subtitle">
-        {step === "form" ? "Add funds to your account in real-time." : "Review and confirm your deposit."}
-      </div>
-
-      <div className="amount-display">
-        <span className="currency">$</span>
-        {step === "form"
-          ? <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" min="0" />
-          : <span style={{ fontFamily: "Cormorant Garamond", fontSize: 52, fontWeight: 300 }}>{fmt(parseFloat(amount) || 0)}</span>
-        }
-      </div>
-
-      {step === "form" ? (
-        <>
-          <div className="field">
-            <label>Destination Account</label>
-            <select value={acctId} onChange={e => setAcctId(e.target.value)}>
-              {accounts.map(a => <option key={a.id} value={a.id}>{a.id} — {a.type} ({fmtFull(a.balance)})</option>)}
-            </select>
-          </div>
-          <div className="field">
-            <label>Description</label>
-            <input type="text" value={desc} onChange={e => setDesc(e.target.value)} placeholder="Deposit description" />
-          </div>
-        </>
-      ) : (
-        <div className="confirm-box">
-          <div className="confirm-row"><span>Amount</span><span style={{ color: "var(--green)" }}>${fmt(parseFloat(amount))}</span></div>
-          <div className="confirm-row"><span>Account</span><span>{acctId}</span></div>
-          <div className="confirm-row"><span>Description</span><span>{desc}</span></div>
-          <div className="confirm-row"><span>Processing</span><span>Real-time via COBOL</span></div>
-          <div className="confirm-row"><span>Batch Reconcile</span><span>22:00 EST nightly</span></div>
-        </div>
-      )}
-
-      <button className="btn-primary" onClick={submit} disabled={!amount || parseFloat(amount) <= 0 || loading}>
-        {loading ? <span className="spinner" /> : step === "form" ? "Continue" : "Confirm Deposit"}
-      </button>
-    </div>
-  );
-}
-
-function WithdrawPage({ accounts, onBack, onSuccess }) {
-  const [amount, setAmount] = useState("");
-  const [acctId, setAcctId] = useState(accounts[0]?.id || "");
-  const [desc, setDesc] = useState("ATM WITHDRAWAL");
   const [step, setStep] = useState("form");
   const [loading, setLoading] = useState(false);
   const [ref, setRef] = useState("");
+  const [error, setError] = useState("");
 
   const acct = accounts.find(a => a.id === acctId);
-  const isOverdraft = acct && parseFloat(amount) > acct.balance + (acct.overdraftLimit || 0);
+  const isOverdraft = mode !== "deposit" && acct && parseFloat(amount) > acct.balance + (acct.overdraftLimit || 0);
+
+  const titles = { deposit: t.depositFunds, withdraw: t.withdrawFunds, transfer: t.transferFunds };
+  const subs   = { deposit: t.depositSub,   withdraw: t.withdrawSub,   transfer: t.transferSub };
+  const confirmLabels = { deposit: t.confirmDeposit, withdraw: t.confirmWithdraw, transfer: t.confirmTransfer };
+  const successTitles = { deposit: t.depositSuccess, withdraw: t.withdrawSuccess, transfer: t.transferSuccess };
 
   const submit = async () => {
     if (step === "form") { setStep("confirm"); return; }
-    setLoading(true);
-    const res = await api.withdraw(acctId, parseFloat(amount), desc);
-    setRef(res.reference);
-    setStep("success");
+    setLoading(true); setError("");
+    try {
+      let res;
+      if (mode === "deposit")  res = await api.deposit(acctId, amount, desc);
+      if (mode === "withdraw") res = await api.withdraw(acctId, amount, desc);
+      if (mode === "transfer") res = await api.transfer(acctId, toAcctId, amount, desc);
+      setRef(res.reference);
+      setStep("success");
+    } catch (e) {
+      setError(e.message);
+      setStep("form");
+    }
     setLoading(false);
-    onSuccess && onSuccess();
   };
 
   if (step === "success") return (
     <div className="page">
       <div className="success-screen">
         <div className="success-ring">✓</div>
-        <div className="success-title">Withdrawal Complete</div>
-        <div className="success-sub">${fmt(parseFloat(amount))} withdrawn from {acctId}</div>
-        <div className="success-ref">REF: {ref}</div>
-        <button className="btn-primary" onClick={onBack}>Back to Dashboard</button>
+        <div className="success-title">{successTitles[mode]}</div>
+        <div className="success-sub">
+          ${fmt(parseFloat(amount))} {mode === "deposit" ? t.depositSuccessSub : mode === "withdraw" ? t.withdrawSuccessSub : t.transferSuccessSub} {acctId}
+          {mode === "transfer" && ` ${t.to} ${toAcctId}`}
+        </div>
+        <div className="success-ref">{t.ref}: {ref}</div>
+        <div style={{ fontSize:12, color:"var(--muted)", marginBottom:24 }}>{t.fundsAvailable}</div>
+        <button className="btn-primary" onClick={onBack}>{t.backToDash}</button>
       </div>
     </div>
   );
 
+  const disabled = !amount || parseFloat(amount) <= 0 || loading || (mode !== "deposit" && isOverdraft) || (mode === "transfer" && acctId === toAcctId);
+
   return (
     <div className="page">
-      <button className="back-btn" onClick={step === "confirm" ? () => setStep("form") : onBack}>← {step === "confirm" ? "Edit" : "Back"}</button>
-      <div className="page-title">{step === "form" ? "Withdraw Funds" : "Confirm Withdrawal"}</div>
-      <div className="page-subtitle">
-        {step === "form" ? "Withdraw from your account instantly." : "Review and confirm your withdrawal."}
-      </div>
+      <button className="back-btn" onClick={step === "confirm" ? () => setStep("form") : onBack}>
+        ← {step === "confirm" ? t.edit : t.back}
+      </button>
+      <div className="page-title">{step === "form" ? titles[mode] : confirmLabels[mode]}</div>
+      <div className="page-subtitle">{subs[mode]}</div>
+      {error && <div className="error-msg">{error}</div>}
 
       <div className="amount-display">
         <span className="currency">$</span>
         {step === "form"
-          ? <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" />
-          : <span style={{ fontFamily: "Cormorant Garamond", fontSize: 52, fontWeight: 300 }}>{fmt(parseFloat(amount) || 0)}</span>
+          ? <input className="amount-input" type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" />
+          : <span style={{ fontFamily:"Cormorant Garamond", fontSize:52, fontWeight:300 }}>{fmt(parseFloat(amount)||0)}</span>
         }
       </div>
 
       {isOverdraft && step === "form" && (
-        <div className="alert-card danger" style={{ marginBottom: 16 }}>
-          <div className="alert-icon">⚠️</div>
+        <div className="alert-card danger" style={{ marginBottom:16 }}>
+          <span>⚠️</span>
           <div>
-            <div className="alert-title">Overdraft Warning</div>
-            <div className="alert-body">This exceeds your available balance + overdraft limit of ${fmt(acct.balance + acct.overdraftLimit)}.</div>
+            <div className="alert-title">{t.overdraftWarn}</div>
+            <div className="alert-body">{t.overdraftWarnBody} {fmtFull((acct?.balance||0) + (acct?.overdraftLimit||0))}.</div>
           </div>
         </div>
       )}
@@ -1136,355 +534,570 @@ function WithdrawPage({ accounts, onBack, onSuccess }) {
       {step === "form" ? (
         <>
           <div className="field">
-            <label>Source Account</label>
+            <label>{mode === "deposit" ? t.destination : mode === "withdraw" ? t.source : t.fromAccount}</label>
             <select value={acctId} onChange={e => setAcctId(e.target.value)}>
               {accounts.filter(a => a.status === "A").map(a => (
                 <option key={a.id} value={a.id}>{a.id} — {a.type} ({fmtFull(a.balance)})</option>
               ))}
             </select>
           </div>
-          <div className="field">
-            <label>Description</label>
-            <input type="text" value={desc} onChange={e => setDesc(e.target.value)} />
-          </div>
-        </>
-      ) : (
-        <div className="confirm-box">
-          <div className="confirm-row"><span>Amount</span><span style={{ color: "var(--red)" }}>-${fmt(parseFloat(amount))}</span></div>
-          <div className="confirm-row"><span>Account</span><span>{acctId}</span></div>
-          <div className="confirm-row"><span>Available Balance</span><span>{fmtFull(acct?.balance || 0)}</span></div>
-          <div className="confirm-row"><span>Description</span><span>{desc}</span></div>
-        </div>
-      )}
-
-      <button className="btn-primary" onClick={submit} disabled={!amount || parseFloat(amount) <= 0 || loading || isOverdraft}>
-        {loading ? <span className="spinner" /> : step === "form" ? "Continue" : "Confirm Withdrawal"}
-      </button>
-    </div>
-  );
-}
-
-function TransferPage({ accounts, onBack, onSuccess }) {
-  const [amount, setAmount] = useState("");
-  const [fromId, setFromId] = useState(accounts[0]?.id || "");
-  const [toId, setToId] = useState(accounts[1]?.id || accounts[0]?.id || "");
-  const [desc, setDesc] = useState("INTERNAL TRANSFER");
-  const [step, setStep] = useState("form");
-  const [loading, setLoading] = useState(false);
-  const [ref, setRef] = useState("");
-
-  const submit = async () => {
-    if (step === "form") { setStep("confirm"); return; }
-    setLoading(true);
-    const res = await api.transfer(fromId, toId, parseFloat(amount), desc);
-    setRef(res.reference);
-    setStep("success");
-    setLoading(false);
-    onSuccess && onSuccess();
-  };
-
-  if (step === "success") return (
-    <div className="page">
-      <div className="success-screen">
-        <div className="success-ring">✓</div>
-        <div className="success-title">Transfer Complete</div>
-        <div className="success-sub">${fmt(parseFloat(amount))} moved from {fromId} to {toId}</div>
-        <div className="success-ref">REF: {ref}</div>
-        <button className="btn-primary" onClick={onBack}>Back to Dashboard</button>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="page">
-      <button className="back-btn" onClick={step === "confirm" ? () => setStep("form") : onBack}>← {step === "confirm" ? "Edit" : "Back"}</button>
-      <div className="page-title">{step === "form" ? "Transfer Funds" : "Confirm Transfer"}</div>
-      <div className="page-subtitle">Move money between your Zentra accounts.</div>
-
-      <div className="amount-display">
-        <span className="currency">$</span>
-        {step === "form"
-          ? <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" />
-          : <span style={{ fontFamily: "Cormorant Garamond", fontSize: 52, fontWeight: 300 }}>{fmt(parseFloat(amount) || 0)}</span>
-        }
-      </div>
-
-      {step === "form" ? (
-        <>
-          <div className="field">
-            <label>From Account</label>
-            <select value={fromId} onChange={e => setFromId(e.target.value)}>
-              {accounts.map(a => <option key={a.id} value={a.id}>{a.id} — {a.type} ({fmtFull(a.balance)})</option>)}
-            </select>
-          </div>
-          <div className="field">
-            <label>To Account</label>
-            <select value={toId} onChange={e => setToId(e.target.value)}>
-              {accounts.filter(a => a.id !== fromId).map(a => <option key={a.id} value={a.id}>{a.id} — {a.type} ({fmtFull(a.balance)})</option>)}
-            </select>
-          </div>
-          <div className="field">
-            <label>Description</label>
-            <input type="text" value={desc} onChange={e => setDesc(e.target.value)} />
-          </div>
-        </>
-      ) : (
-        <div className="confirm-box">
-          <div className="confirm-row"><span>Amount</span><span>${fmt(parseFloat(amount))}</span></div>
-          <div className="confirm-row"><span>From</span><span>{fromId}</span></div>
-          <div className="confirm-row"><span>To</span><span>{toId}</span></div>
-          <div className="confirm-row"><span>Description</span><span>{desc}</span></div>
-          <div className="confirm-row"><span>Processing</span><span>Real-time + EOD Batch</span></div>
-        </div>
-      )}
-
-      <button className="btn-primary" onClick={submit} disabled={!amount || parseFloat(amount) <= 0 || fromId === toId || loading}>
-        {loading ? <span className="spinner" /> : step === "form" ? "Continue" : "Confirm Transfer"}
-      </button>
-    </div>
-  );
-}
-
-function HistoryPage({ accounts, transactions, onBack }) {
-  const [filter, setFilter] = useState("ALL");
-  const [acctFilter, setAcctFilter] = useState("ALL");
-  const types = ["ALL", "DEP", "WTH", "XFR", "FEE"];
-
-  const filtered = transactions.filter(t => {
-    const typeOk = filter === "ALL" || t.type === filter;
-    const acctOk = acctFilter === "ALL" || t.acct === acctFilter;
-    return typeOk && acctOk;
-  });
-
-  return (
-    <div className="page">
-      <button className="back-btn" onClick={onBack}>← Back</button>
-      <div className="page-title">Transaction History</div>
-      <div className="page-subtitle">{filtered.length} transactions found</div>
-
-      <div className="field">
-        <label>Filter by Account</label>
-        <select value={acctFilter} onChange={e => setAcctFilter(e.target.value)}>
-          <option value="ALL">All Accounts</option>
-          {accounts.map(a => <option key={a.id} value={a.id}>{a.id} — {a.type}</option>)}
-        </select>
-      </div>
-
-      <div style={{ display: "flex", gap: 6, marginBottom: 20, overflowX: "auto" }}>
-        {types.map(t => (
-          <button key={t} onClick={() => setFilter(t)}
-            style={{
-              padding: "6px 14px", borderRadius: 20, border: "1px solid",
-              borderColor: filter === t ? "var(--gold)" : "var(--border)",
-              background: filter === t ? "rgba(201,168,76,0.1)" : "transparent",
-              color: filter === t ? "var(--gold)" : "var(--muted)",
-              fontSize: 12, cursor: "pointer", whiteSpace: "nowrap",
-              fontFamily: "DM Sans, sans-serif"
-            }}
-          >{t === "ALL" ? "All" : t === "DEP" ? "Deposits" : t === "WTH" ? "Withdrawals" : t === "XFR" ? "Transfers" : "Fees"}</button>
-        ))}
-      </div>
-
-      <div className="txn-list">
-        {filtered.length === 0
-          ? <div style={{ textAlign: "center", color: "var(--muted)", padding: 40, fontSize: 14 }}>No transactions found</div>
-          : filtered.map(t => (
-            <div key={t.id} className="txn-item">
-              <div className={`txn-icon ${txnClass(t.type)}`}>{txnIcon(t.type)}</div>
-              <div className="txn-details">
-                <div className="txn-desc">{t.desc}</div>
-                <div className="txn-meta">
-                  {t.date} · {t.acct} · <span className={`tag tag-${t.status === "APR" ? "approved" : t.status === "PND" ? "pending" : "rejected"}`}>{t.status}</span>
-                </div>
-              </div>
-              <div className={`txn-amount ${isCredit(t.type) ? "credit" : "debit"}`}>
-                {isCredit(t.type) ? "+" : "-"}${fmt(t.amount)}
-              </div>
+          {mode === "transfer" && (
+            <div className="field">
+              <label>{t.toAccount}</label>
+              <select value={toAcctId} onChange={e => setToAcctId(e.target.value)}>
+                {accounts.filter(a => a.id !== acctId && a.status === "A").map(a => (
+                  <option key={a.id} value={a.id}>{a.id} — {a.type} ({fmtFull(a.balance)})</option>
+                ))}
+              </select>
             </div>
-          ))
-        }
-      </div>
+          )}
+          <div className="field">
+            <label>{t.description}</label>
+            <input type="text" value={desc} onChange={e => setDesc(e.target.value)} maxLength={30} />
+          </div>
+        </>
+      ) : (
+        <div className="confirm-box">
+          <div className="confirm-row"><span>{t.amount}</span><span style={{ color: mode === "deposit" ? "var(--green)" : "var(--red)" }}>{mode !== "deposit" ? "-" : "+"}${fmt(parseFloat(amount))}</span></div>
+          <div className="confirm-row"><span>{mode === "transfer" ? t.fromAccount : (mode === "deposit" ? t.destination : t.source)}</span><span>{acctId}</span></div>
+          {mode === "transfer" && <div className="confirm-row"><span>{t.toAccount}</span><span>{toAcctId}</span></div>}
+          <div className="confirm-row"><span>{t.description}</span><span>{desc}</span></div>
+          <div className="confirm-row"><span>{t.processingCobol}</span><span>✓ COBOL Engine</span></div>
+          <div className="confirm-row"><span>{t.batchReconcile}</span><span>22:00 EST</span></div>
+        </div>
+      )}
+
+      <button className="btn-primary" onClick={submit} disabled={disabled}>
+        {loading ? <><span className="spinner" /> {t.processing}</> : (step === "form" ? t.continue : t.confirm)}
+      </button>
     </div>
   );
 }
 
-function NewAccountPage({ onBack, onCreated }) {
+// ─── NEW ACCOUNT ─────────────────────────────────────────────────────────────
+function NewAccountPage({ t, user, onBack, onCreated }) {
   const [type, setType] = useState("CHECKING");
   const [loading, setLoading] = useState(false);
   const [created, setCreated] = useState(null);
+  const [error, setError] = useState("");
+
+  const types = [
+    { key:"CHECKING",    icon:"💳", label:t.checking,    desc:t.checkingDesc,   fee:"$12.00", od:"$500.00", rate:"0.05%" },
+    { key:"SAVINGS",     icon:"🏦", label:t.savings,     desc:t.savingsDesc,    fee:"$5.00",  od:t.noneOD,  rate:"2.15%" },
+    { key:"MONEY_MARKET",icon:"📈", label:t.moneyMarket, desc:t.mmDesc,         fee:"$15.00", od:t.noneOD,  rate:"3.80%" },
+  ];
+  const selected = types.find(t => t.key === type);
 
   const create = async () => {
-    setLoading(true);
-    const res = await api.createAccount({ type });
-    setCreated(res);
+    setLoading(true); setError("");
+    try {
+      const res = await api.createAccount(user.name, type);
+      await api.linkAccount(res.id);
+      setCreated(res);
+      onCreated && onCreated(res);
+    } catch(e) { setError(e.message); }
     setLoading(false);
-    onCreated && onCreated(res);
   };
 
   if (created) return (
     <div className="page">
       <div className="success-screen">
         <div className="success-ring">✓</div>
-        <div className="success-title">Account Opened</div>
-        <div className="success-sub">Your new {created.type} account is ready</div>
+        <div className="success-title">{t.openNewAccount}</div>
+        <div className="success-sub">{created.type}</div>
         <div className="success-ref">{created.id}</div>
-        <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 24 }}>
-          COBOL engine initialized. Make your first deposit to activate batch processing.
-        </div>
-        <button className="btn-primary" onClick={onBack}>Back to Dashboard</button>
+        <button className="btn-primary" onClick={onBack}>{t.backToDash}</button>
       </div>
     </div>
   );
 
   return (
     <div className="page">
-      <button className="back-btn" onClick={onBack}>← Back</button>
-      <div className="page-title">Open New Account</div>
-      <div className="page-subtitle">Choose your account type. Zentra accounts are COBOL-powered for maximum reliability.</div>
-
-      {[
-        { type: "CHECKING", icon: "💳", desc: "Daily transactions, debit access, overdraft protection up to $500" },
-        { type: "SAVINGS",  icon: "🏦", desc: "High-yield savings with nightly interest crediting via batch cycle" },
-        { type: "MONEY_MARKET", icon: "📈", desc: "Premium rates for balances over $10,000" },
-      ].map(a => (
-        <div key={a.type}
-          onClick={() => setType(a.type)}
-          style={{
-            background: type === a.type ? "rgba(201,168,76,0.06)" : "var(--navy3)",
-            border: `1px solid ${type === a.type ? "var(--gold)" : "var(--border)"}`,
-            borderRadius: 14, padding: "18px 16px", marginBottom: 10,
-            cursor: "pointer", display: "flex", gap: 14, alignItems: "flex-start", transition: "all .2s"
-          }}>
-          <div style={{ fontSize: 28, flexShrink: 0 }}>{a.icon}</div>
-          <div>
-            <div style={{ fontWeight: 500, marginBottom: 4, fontSize: 15 }}>{a.type.replace("_", " ")}</div>
-            <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>{a.desc}</div>
+      <button className="back-btn" onClick={onBack}>← {t.back}</button>
+      <div className="page-title">{t.openNewAccount}</div>
+      <div className="page-subtitle">{t.openNewSub}</div>
+      {error && <div className="error-msg">{error}</div>}
+      {types.map(a => (
+        <div key={a.key} onClick={() => setType(a.key)}
+          style={{ background: type===a.key ? "rgba(201,168,76,0.06)" : "var(--navy3)", border:`1px solid ${type===a.key?"var(--gold)":"var(--border)"}`, borderRadius:14, padding:"18px 16px", marginBottom:10, cursor:"pointer", display:"flex", gap:14, alignItems:"flex-start", transition:"all .2s" }}>
+          <div style={{ fontSize:28 }}>{a.icon}</div>
+          <div style={{ flex:1 }}>
+            <div style={{ fontWeight:500, marginBottom:4, fontSize:15 }}>{a.label}</div>
+            <div style={{ fontSize:12, color:"var(--muted)", lineHeight:1.5 }}>{a.desc}</div>
           </div>
-          {type === a.type && <div style={{ marginLeft: "auto", color: "var(--gold)", fontSize: 18 }}>✓</div>}
+          {type === a.key && <div style={{ color:"var(--gold)", fontSize:18, flexShrink:0 }}>✓</div>}
         </div>
       ))}
-
-      <div className="divider" />
-
-      <div style={{ background: "var(--navy3)", border: "1px solid var(--border)", borderRadius: 12, padding: 16, marginBottom: 20 }}>
-        <div style={{ fontSize: 11, letterSpacing: 2, color: "var(--muted)", textTransform: "uppercase", marginBottom: 10 }}>Account Terms</div>
-        {[["Monthly Fee", type === "CHECKING" ? "$12.00 (waived with $1,500 min)" : type === "SAVINGS" ? "$5.00" : "$15.00"],
-          ["Overdraft Limit", type === "CHECKING" ? "$500.00" : "None"],
-          ["Interest Rate", type === "CHECKING" ? "0.05% APY" : type === "SAVINGS" ? "2.15% APY" : "3.80% APY"],
-          ["Processing", "Real-time + nightly COBOL batch"]
-        ].map(([k, v]) => (
-          <div key={k} className="confirm-row"><span>{k}</span><span>{v}</span></div>
-        ))}
-      </div>
-
+      {selected && (
+        <div className="confirm-box" style={{ marginTop:16 }}>
+          <div className="section-title" style={{ marginBottom:8 }}>{t.accountTerms}</div>
+          <div className="confirm-row"><span>{t.monthlyFee}</span><span>{selected.fee}</span></div>
+          <div className="confirm-row"><span>{t.overdraftLimit}</span><span>{selected.od}</span></div>
+          <div className="confirm-row"><span>{t.interestRate}</span><span>{selected.rate} {t.apy}</span></div>
+          <div className="confirm-row"><span>Processing</span><span>{t.cobolProcessing}</span></div>
+        </div>
+      )}
       <button className="btn-primary" onClick={create} disabled={loading}>
-        {loading ? <span className="spinner" /> : `Open ${type.replace("_", " ")} Account`}
+        {loading ? <><span className="spinner" /></> : `${t.openBtn} ${selected?.label}`}
       </button>
     </div>
   );
 }
 
-function ProfilePage({ user, accounts, onLogout }) {
-  const initials = user.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+// ─── HISTORY ──────────────────────────────────────────────────────────────────
+function HistoryPage({ t, accounts, onBack }) {
+  const [txns, setTxns] = useState([]);
+  const [filter, setFilter] = useState("ALL");
+  const [acctFilter, setAcctFilter] = useState("ALL");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.getTransactions(acctFilter === "ALL" ? null : acctFilter)
+      .then(data => setTxns(data.transactions || []))
+      .catch(() => setTxns([]))
+      .finally(() => setLoading(false));
+  }, [acctFilter]);
+
+  const filtered = txns.filter(t => filter === "ALL" || t.type === filter || (filter === "WTH" && t.type === "WDR"));
 
   return (
     <div className="page">
-      <div style={{ textAlign: "center", paddingTop: 20 }}>
-        <div className="profile-avatar" style={{ margin: "0 auto 16px" }}>{initials}</div>
-        <div className="profile-name">{user.name}</div>
-        <div className="profile-email">{user.email}</div>
+      <button className="back-btn" onClick={onBack}>← {t.back}</button>
+      <div className="page-title">{t.transactionHistory}</div>
+      <div className="page-subtitle">{filtered.length} {t.found}</div>
+      <div className="field">
+        <label>{t.filterAccount}</label>
+        <select value={acctFilter} onChange={e => setAcctFilter(e.target.value)}>
+          <option value="ALL">{t.allAccounts}</option>
+          {accounts.map(a => <option key={a.id} value={a.id}>{a.id} — {a.type}</option>)}
+        </select>
       </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 24 }}>
-        {[
-          { label: "Accounts", value: accounts.length },
-          { label: "Total Balance", value: fmtFull(accounts.reduce((s, a) => s + a.balance, 0)) },
-          { label: "Batch Status", value: "22:00 EST" },
-        ].map(s => (
-          <div key={s.label} style={{ background: "var(--navy3)", border: "1px solid var(--border)", borderRadius: 12, padding: 14, textAlign: "center" }}>
-            <div style={{ fontFamily: "Cormorant Garamond", fontSize: 22, fontWeight: 400, marginBottom: 4 }}>{s.value}</div>
-            <div style={{ fontSize: 10, letterSpacing: 1, color: "var(--muted)", textTransform: "uppercase" }}>{s.label}</div>
-          </div>
+      <div style={{ display:"flex", gap:6, marginBottom:20, overflowX:"auto" }}>
+        {[["ALL",t.all],["DEP",t.deposits],["WTH",t.withdrawals],["XFR",t.transfers],["FEE",t.fees]].map(([key,label]) => (
+          <button key={key} onClick={() => setFilter(key)}
+            style={{ padding:"6px 14px", borderRadius:20, border:"1px solid", borderColor: filter===key?"var(--gold)":"var(--border)", background: filter===key?"rgba(201,168,76,0.1)":"transparent", color: filter===key?"var(--gold)":"var(--muted)", fontSize:12, cursor:"pointer", whiteSpace:"nowrap", fontFamily:"DM Sans,sans-serif" }}>
+            {label}
+          </button>
         ))}
       </div>
-
-      <div className="settings-group">
-        <div className="section-title">Account</div>
-        {[
-          { icon: "👤", label: "Personal Information" },
-          { icon: "🔐", label: "Security & Password" },
-          { icon: "🔔", label: "Notification Preferences" },
-          { icon: "📄", label: "Download Statements" },
-        ].map(s => (
-          <div key={s.label} className="settings-item">
-            <div className="settings-icon">{s.icon}</div>
-            <div className="settings-label">{s.label}</div>
-            <div className="settings-arrow">›</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="settings-group">
-        <div className="section-title">Platform</div>
-        {[
-          { icon: "⚙️",  label: "COBOL Batch Schedule", value: "22:00 EST" },
-          { icon: "🔗",  label: "API Documentation" },
-          { icon: "📊",  label: "Operations Dashboard" },
-        ].map(s => (
-          <div key={s.label} className="settings-item">
-            <div className="settings-icon">{s.icon}</div>
-            <div className="settings-label">{s.label}</div>
-            {s.value && <div className="settings-value">{s.value}</div>}
-            <div className="settings-arrow">›</div>
-          </div>
-        ))}
-      </div>
-
-      <button className="btn-danger" onClick={onLogout}>Sign Out</button>
+      {loading ? <div style={{ textAlign:"center", padding:40 }}><span className="spinner" /></div> : (
+        <div className="txn-list">
+          {filtered.length === 0
+            ? <div style={{ textAlign:"center", color:"var(--muted)", padding:40 }}>{t.noTxns}</div>
+            : filtered.map((txn, i) => (
+              <div key={i} className="txn-item">
+                <div className={`txn-icon ${txnClass(txn.type)}`}>{txnIcon(txn.type)}</div>
+                <div className="txn-details">
+                  <div className="txn-desc">{txn.description || txn.desc}</div>
+                  <div className="txn-meta">{txn.date} · {txn.account_id || txn.acct} · <span className={`tag tag-${txn.status==="APR"?"approved":txn.status==="PND"?"pending":"rejected"}`}>{txn.status}</span></div>
+                </div>
+                <div className={`txn-amount ${isCredit(txn.type)?"credit":"debit"}`}>
+                  {isCredit(txn.type)?"+":"-"}${fmt(txn.amount)}
+                </div>
+              </div>
+            ))
+          }
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── MAIN APP ─────────────────────────────────────────────────────────────────
-export default function ZentraPortal() {
-  const [user, setUser] = useState(null);
-  const [screen, setScreen] = useState("dashboard");
-  const [accounts, setAccounts] = useState(MOCK_ACCOUNTS);
-  const [transactions, setTransactions] = useState(MOCK_TXNS);
-  const [selectedAccount, setSelectedAccount] = useState(null);
+// ─── PROFILE SUBPAGES ─────────────────────────────────────────────────────────
+function PersonalInfoPage({ t, user, onBack, onUpdated }) {
+  const [form, setForm] = useState({ name: user.name, phone: user.phone || "" });
   const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
+  const set = (k,v) => setForm(f => ({...f,[k]:v}));
 
-  const navTo = useCallback((s) => setScreen(s), []);
+  const save = async () => {
+    setLoading(true); setMsg("");
+    try {
+      const res = await api.updateMe({ name: form.name, phone: form.phone });
+      onUpdated({ ...user, name: res.name, phone: res.phone });
+      setMsg(t.saved);
+    } catch(e) { setMsg(e.message); }
+    setLoading(false);
+  };
+
+  return (
+    <div className="page">
+      <button className="back-btn" onClick={onBack}>← {t.back}</button>
+      <div className="page-title">{t.personalInfo}</div>
+      {msg && <div className={msg === t.saved ? "success-msg" : "error-msg"}>{msg}</div>}
+      <div className="field"><label>{t.name}</label><input type="text" value={form.name} onChange={e => set("name",e.target.value)} /></div>
+      <div className="field"><label>{t.email}</label><input type="email" value={user.email} disabled style={{ opacity:.5 }} /></div>
+      <div className="field"><label>{t.phone}</label><input type="tel" value={form.phone} onChange={e => set("phone",e.target.value)} placeholder="+1 (555) 000-0000" /></div>
+      <button className="btn-primary" onClick={save} disabled={loading}>
+        {loading ? <><span className="spinner" /> {t.saving}</> : t.save}
+      </button>
+    </div>
+  );
+}
+
+function SecurityPage({ t, onBack }) {
+  const [form, setForm] = useState({ old:"", new1:"", new2:"" });
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState({ text:"", ok:false });
+  const set = (k,v) => setForm(f => ({...f,[k]:v}));
+
+  const update = async () => {
+    if (form.new1 !== form.new2) { setMsg({ text:t.pwMismatch, ok:false }); return; }
+    if (form.new1.length < 8)    { setMsg({ text:t.minPw, ok:false }); return; }
+    setLoading(true); setMsg({ text:"", ok:false });
+    try {
+      await api.changePassword(form.old, form.new1);
+      setMsg({ text:t.pwUpdated, ok:true });
+      setForm({ old:"", new1:"", new2:"" });
+    } catch(e) { setMsg({ text: e.message.includes("incorrect") ? t.pwWrong : e.message, ok:false }); }
+    setLoading(false);
+  };
+
+  return (
+    <div className="page">
+      <button className="back-btn" onClick={onBack}>← {t.back}</button>
+      <div className="page-title">{t.securityPw}</div>
+      {msg.text && <div className={msg.ok ? "success-msg" : "error-msg"}>{msg.text}</div>}
+      <div className="field"><label>{t.currentPw}</label><input type="password" value={form.old} onChange={e => set("old",e.target.value)} /></div>
+      <div className="field"><label>{t.newPw}</label><input type="password" value={form.new1} onChange={e => set("new1",e.target.value)} /></div>
+      <div className="field"><label>{t.confirmNewPw}</label><input type="password" value={form.new2} onChange={e => set("new2",e.target.value)} /></div>
+      <button className="btn-primary" onClick={update} disabled={loading || !form.old || !form.new1}>
+        {loading ? <><span className="spinner" /></> : t.updatePw}
+      </button>
+    </div>
+  );
+}
+
+function NotificationsPage({ t, user, onBack, onUpdated }) {
+  const [prefs, setPrefs] = useState({
+    notif_low_bal: user.notif_low_bal ?? true,
+    notif_txn:     user.notif_txn     ?? true,
+    notif_batch:   user.notif_batch   ?? true,
+  });
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+  const toggle = (k) => setPrefs(p => ({ ...p, [k]: !p[k] }));
+
+  const save = async () => {
+    setSaving(true); setMsg("");
+    try {
+      await api.updateNotifications(prefs);
+      onUpdated({ ...user, ...prefs });
+      setMsg(t.notifSaved);
+    } catch(e) { setMsg(e.message); }
+    setSaving(false);
+  };
+
+  return (
+    <div className="page">
+      <button className="back-btn" onClick={onBack}>← {t.back}</button>
+      <div className="page-title">{t.notifPrefs}</div>
+      {msg && <div className="success-msg">{msg}</div>}
+      <div className="confirm-box" style={{ marginBottom:20 }}>
+        {[["notif_low_bal", t.notifLowBal], ["notif_txn", t.notifTxn], ["notif_batch", t.notifBatch]].map(([key, label]) => (
+          <div key={key} className="toggle-row">
+            <div>
+              <div className="toggle-label">{label}</div>
+            </div>
+            <div className={`toggle ${prefs[key] ? "on" : ""}`} onClick={() => toggle(key)} />
+          </div>
+        ))}
+      </div>
+      <button className="btn-primary" onClick={save} disabled={saving}>
+        {saving ? <><span className="spinner" /></> : t.save}
+      </button>
+    </div>
+  );
+}
+
+function StatementPage({ t, accounts, onBack }) {
+  const [acctId, setAcctId] = useState("ALL");
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  const download = async () => {
+    setLoading(true); setMsg("");
+    try {
+      const res = await api.downloadStatement(acctId === "ALL" ? null : acctId);
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href     = url;
+      a.download = `zentra_statement_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setMsg(t.saved);
+    } catch(e) { setMsg(e.message); }
+    setLoading(false);
+  };
+
+  return (
+    <div className="page">
+      <button className="back-btn" onClick={onBack}>← {t.back}</button>
+      <div className="page-title">{t.stmtDownload}</div>
+      <div className="page-subtitle">{t.stmtSub}</div>
+      {msg && <div className="success-msg">{msg}</div>}
+      <div className="field">
+        <label>{t.filterAccount}</label>
+        <select value={acctId} onChange={e => setAcctId(e.target.value)}>
+          <option value="ALL">{t.allAccounts}</option>
+          {accounts.map(a => <option key={a.id} value={a.id}>{a.id} — {a.type}</option>)}
+        </select>
+      </div>
+      <div style={{ background:"var(--navy3)", border:"1px solid var(--border)", borderRadius:14, padding:20, marginBottom:20, textAlign:"center" }}>
+        <div style={{ fontSize:36, marginBottom:8 }}>📄</div>
+        <div style={{ fontFamily:"Cormorant Garamond", fontSize:20, marginBottom:4 }}>CSV Export</div>
+        <div style={{ fontSize:12, color:"var(--muted)" }}>Date · Account · Type · Amount · Description · Status</div>
+      </div>
+      <button className="btn-primary" onClick={download} disabled={loading}>
+        {loading ? <><span className="spinner" /></> : t.stmtBtn}
+      </button>
+    </div>
+  );
+}
+
+// ─── PROFILE PAGE ────────────────────────────────────────────────────────────
+function ProfilePage({ t, user, accounts, onLogout, onNav, onUpdated, lang, setLang }) {
+  const [subScreen, setSubScreen] = useState(null);
+  const initials = user.name.split(" ").map(n => n[0]).join("").slice(0,2).toUpperCase();
+
+  if (subScreen === "personal") return <PersonalInfoPage t={t} user={user} onBack={() => setSubScreen(null)} onUpdated={onUpdated} />;
+  if (subScreen === "security") return <SecurityPage t={t} onBack={() => setSubScreen(null)} />;
+  if (subScreen === "notifs")   return <NotificationsPage t={t} user={user} onBack={() => setSubScreen(null)} onUpdated={onUpdated} />;
+  if (subScreen === "statement") return <StatementPage t={t} accounts={accounts} onBack={() => setSubScreen(null)} />;
+
+  const handleLogout = async () => {
+    try { await api.logout(); } catch {}
+    setToken(null);
+    onLogout();
+  };
+
+  return (
+    <div className="page">
+      <div style={{ textAlign:"center", paddingTop:20 }}>
+        <div className="profile-avatar">{initials}</div>
+        <div className="profile-name">{user.name}</div>
+        <div className="profile-email">{user.email}</div>
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10, marginBottom:24 }}>
+        {[
+          { label:t.accounts, value: accounts.length },
+          { label:"Balance", value: fmtFull(accounts.reduce((s,a) => s+a.balance, 0)) },
+          { label:"Batch", value: "22:00" },
+        ].map(s => (
+          <div key={s.label} style={{ background:"var(--navy3)", border:"1px solid var(--border)", borderRadius:12, padding:14, textAlign:"center" }}>
+            <div style={{ fontFamily:"Cormorant Garamond", fontSize:20, fontWeight:400, marginBottom:4 }}>{s.value}</div>
+            <div style={{ fontSize:10, letterSpacing:1, color:"var(--muted)", textTransform:"uppercase" }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="section-title">{t.accounts}</div>
+      {[
+        { icon:"👤", label:t.personalInfo,  action:() => setSubScreen("personal") },
+        { icon:"🔐", label:t.securityPw,    action:() => setSubScreen("security") },
+        { icon:"🔔", label:t.notifPrefs,    action:() => setSubScreen("notifs") },
+        { icon:"📄", label:t.downloadStmt,  action:() => setSubScreen("statement") },
+      ].map(s => (
+        <div key={s.label} className="settings-item" onClick={s.action}>
+          <div className="settings-icon">{s.icon}</div>
+          <div className="settings-label">{s.label}</div>
+          <div className="settings-arrow">›</div>
+        </div>
+      ))}
+
+      <div className="divider" />
+      <div className="section-title">Platform</div>
+      {[
+        { icon:"⚙️", label:t.cobolSchedule, value:"22:00 EST", action:null },
+        { icon:"📊", label:t.opsDashboard,  action:() => window.open("/", "_blank") },
+        { icon:"🔗", label:t.apiDocs,        action:() => window.open("/api/docs", "_blank") },
+      ].map(s => (
+        <div key={s.label} className="settings-item" onClick={s.action} style={{ cursor: s.action ? "pointer" : "default" }}>
+          <div className="settings-icon">{s.icon}</div>
+          <div className="settings-label">{s.label}</div>
+          {s.value && <div className="settings-value">{s.value}</div>}
+          {s.action && <div className="settings-arrow">↗</div>}
+        </div>
+      ))}
+
+      <div className="divider" />
+      <div className="section-title">{t.language}</div>
+      <div style={{ display:"flex", gap:10, marginBottom:24 }}>
+        {[["en","English"],["fr","Français"]].map(([code, label]) => (
+          <button key={code} onClick={async () => { setLang(code); try { await api.updateMe({ language: code }); } catch {} }}
+            style={{ flex:1, padding:"12px", borderRadius:12, border:`1px solid ${lang===code?"var(--gold)":"var(--border)"}`, background: lang===code?"rgba(201,168,76,0.08)":"var(--navy3)", color: lang===code?"var(--gold)":"var(--muted)", fontFamily:"DM Sans,sans-serif", fontSize:14, cursor:"pointer" }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <button className="btn-danger" onClick={handleLogout}>{t.signOut}</button>
+    </div>
+  );
+}
+
+// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+function Dashboard({ t, user, accounts, transactions, onNav, onSelectAccount, selectedAccount }) {
+  const totalBalance = accounts.reduce((s,a) => s+a.balance, 0);
+  const recentTxns   = transactions.slice(0,4);
+  const overdrawnAccts = accounts.filter(a => a.balance < 0);
+  const lowBalAccts    = accounts.filter(a => a.balance >= 0 && a.balance < 200);
+
+  return (
+    <div className="page">
+      <div className="greeting">
+        <div className="greeting-sub">{greeting(t)}</div>
+        <div className="greeting-name">{user.name.split(" ")[0]}</div>
+      </div>
+
+      {overdrawnAccts.map(a => (
+        <div key={a.id} className="alert-card danger">
+          <span>⚠️</span>
+          <div>
+            <div className="alert-title">{t.overdraftTitle} — {a.id}</div>
+            <div className="alert-body">{t.overdraftBody.replace("{bal}", fmtFull(a.balance))}</div>
+          </div>
+        </div>
+      ))}
+      {lowBalAccts.map(a => (
+        <div key={a.id} className="alert-card">
+          <span>💛</span>
+          <div>
+            <div className="alert-title">{t.lowBalTitle} — {a.id}</div>
+            <div className="alert-body">{t.lowBalBody.replace("{bal}", fmtFull(a.balance))}</div>
+          </div>
+        </div>
+      ))}
+
+      <div className="balance-hero">
+        <div className="balance-label">{t.totalPortfolio}</div>
+        <div className="balance-amount">
+          <span style={{ fontSize:22, color:"var(--gold)", verticalAlign:"super", marginRight:4 }}>$</span>
+          {fmt(totalBalance).split(".")[0]}
+          <span className="balance-cents">.{fmt(totalBalance).split(".")[1]}</span>
+        </div>
+      </div>
+
+      <div className="batch-bar">
+        <div className="batch-dot" />
+        <span>{t.batchNote}</span>
+      </div>
+
+      <p className="section-title">{t.accounts}</p>
+      <div className="account-scroll">
+        {accounts.map(a => (
+          <div key={a.id} className={`account-pill ${selectedAccount?.id === a.id ? "active" : ""}`} onClick={() => onSelectAccount(a)}>
+            <div className="pill-type">{a.type}</div>
+            <div className="pill-id">{a.id}</div>
+            <div className="pill-balance" style={{ color: a.balance<0?"var(--red)":"var(--white)" }}>{fmtFull(a.balance)}</div>
+            <span className={`pill-status ${a.status==="A"?"active-s":"suspended-s"}`}>{a.status==="A"?t.active:t.suspended}</span>
+          </div>
+        ))}
+        <div className="account-pill" style={{ borderStyle:"dashed", display:"flex", alignItems:"center", justifyContent:"center" }} onClick={() => onNav("new-account")}>
+          <div style={{ textAlign:"center" }}>
+            <div style={{ fontSize:24, marginBottom:6 }}>+</div>
+            <div style={{ fontSize:11, color:"var(--muted)" }}>{t.newAccount}</div>
+          </div>
+        </div>
+      </div>
+
+      <p className="section-title">{t.quickActions}</p>
+      <div className="quick-actions">
+        {[["↓",t.deposit,"deposit"],["↑",t.withdraw,"withdraw"],["⇄",t.transfer,"transfer"],["📄",t.history,"history"]].map(([icon,label,nav]) => (
+          <div key={nav} className="qa-btn" onClick={() => onNav(nav)}>
+            <div className="qa-icon">{icon}</div>
+            <div className="qa-label">{label}</div>
+          </div>
+        ))}
+      </div>
+
+      <p className="section-title">{t.recentTxns}</p>
+      <div className="txn-list">
+        {recentTxns.map((txn,i) => (
+          <div key={i} className="txn-item">
+            <div className={`txn-icon ${txnClass(txn.type)}`}>{txnIcon(txn.type)}</div>
+            <div className="txn-details">
+              <div className="txn-desc">{txn.description || txn.desc}</div>
+              <div className="txn-meta">{txn.date} · <span className={`tag tag-${txn.status==="APR"?"approved":txn.status==="PND"?"pending":"rejected"}`}>{txn.status}</span></div>
+            </div>
+            <div className={`txn-amount ${isCredit(txn.type)?"credit":"debit"}`}>
+              {isCredit(txn.type)?"+":"-"}${fmt(txn.amount)}
+            </div>
+          </div>
+        ))}
+      </div>
+      <button className="btn-ghost" style={{ marginTop:12 }} onClick={() => onNav("history")}>{t.viewAll}</button>
+    </div>
+  );
+}
+
+// ─── ROOT APP ─────────────────────────────────────────────────────────────────
+export default function ZentraPortal() {
+  const [user, setUser]                   = useState(null);
+  const [lang, setLang]                   = useState("en");
+  const [screen, setScreen]               = useState("dashboard");
+  const [accounts, setAccounts]           = useState([]);
+  const [transactions, setTransactions]   = useState([]);
+  const [selectedAccount, setSelectedAccount] = useState(null);
+  const [dataLoading, setDataLoading]     = useState(false);
+  const t = T[lang];
+
+  // Restore session on mount
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+    api.getMe()
+      .then(u => { setUser(u); setLang(u.language || "en"); })
+      .catch(() => setToken(null));
+  }, []);
+
+  // Load real data when user is set
+  useEffect(() => {
+    if (!user) return;
+    setDataLoading(true);
+    Promise.all([
+      api.getAccounts().then(d => setAccounts(d.accounts || [])).catch(() => {}),
+      api.getTransactions(null).then(d => setTransactions(d.transactions || [])).catch(() => {}),
+    ]).finally(() => setDataLoading(false));
+  }, [user]);
+
+  const navTo = useCallback(s => setScreen(s), []);
+
+  const handleLogin = (u) => { setUser(u); setLang(u.language || "en"); setScreen("dashboard"); };
+  const handleLogout = () => { setUser(null); setAccounts([]); setTransactions([]); setScreen("dashboard"); };
+  const handleAccountCreated = (a) => setAccounts(prev => [...prev, a]);
+  const handleUserUpdated = (u) => setUser(u);
 
   if (!user) return (
     <>
       <style>{CSS}</style>
       <div className="app">
-        <AuthScreen onLogin={(u) => { setUser(u); setScreen("dashboard"); }} />
+        <AuthScreen onLogin={handleLogin} lang={lang} setLang={setLang} t={t} />
       </div>
     </>
   );
 
+  const mainScreens = ["dashboard","transfer","deposit","history","profile"];
   const navItems = [
-    { icon: "⌂",  label: "Home",     screen: "dashboard" },
-    { icon: "⇄",  label: "Transfer", screen: "transfer" },
-    { icon: "↓",  label: "Deposit",  screen: "deposit" },
-    { icon: "📋", label: "History",  screen: "history" },
-    { icon: "☰",  label: "Profile",  screen: "profile" },
+    { icon:"⌂", label:t.home,     screen:"dashboard" },
+    { icon:"⇄", label:t.transfer, screen:"transfer" },
+    { icon:"↓", label:t.deposit,  screen:"deposit" },
+    { icon:"📋",label:t.history,  screen:"history" },
+    { icon:"☰", label:t.profile,  screen:"profile" },
   ];
-
-  const mainScreens = ["dashboard", "transfer", "deposit", "history", "profile"];
 
   const renderScreen = () => {
     switch (screen) {
-      case "dashboard":  return <Dashboard user={user} accounts={accounts} transactions={transactions} onNav={navTo} onSelectAccount={setSelectedAccount} selectedAccount={selectedAccount} />;
-      case "deposit":    return <DepositPage accounts={accounts} onBack={() => navTo("dashboard")} onSuccess={() => {}} />;
-      case "withdraw":   return <WithdrawPage accounts={accounts} onBack={() => navTo("dashboard")} onSuccess={() => {}} />;
-      case "transfer":   return <TransferPage accounts={accounts} onBack={() => navTo("dashboard")} onSuccess={() => {}} />;
-      case "history":    return <HistoryPage accounts={accounts} transactions={transactions} onBack={() => navTo("dashboard")} />;
-      case "new-account": return <NewAccountPage onBack={() => navTo("dashboard")} onCreated={(a) => setAccounts(prev => [...prev, a])} />;
-      case "profile":    return <ProfilePage user={user} accounts={accounts} onLogout={() => { setUser(null); setScreen("dashboard"); }} />;
-      default:           return null;
+      case "dashboard":  return <Dashboard t={t} user={user} accounts={accounts} transactions={transactions} onNav={navTo} onSelectAccount={setSelectedAccount} selectedAccount={selectedAccount} />;
+      case "deposit":    return <TxnFlow t={t} accounts={accounts} onBack={() => navTo("dashboard")} mode="deposit" />;
+      case "withdraw":   return <TxnFlow t={t} accounts={accounts} onBack={() => navTo("dashboard")} mode="withdraw" />;
+      case "transfer":   return <TxnFlow t={t} accounts={accounts} onBack={() => navTo("dashboard")} mode="transfer" />;
+      case "history":    return <HistoryPage t={t} accounts={accounts} onBack={() => navTo("dashboard")} />;
+      case "new-account": return <NewAccountPage t={t} user={user} onBack={() => navTo("dashboard")} onCreated={handleAccountCreated} />;
+      case "profile":    return <ProfilePage t={t} user={user} accounts={accounts} onLogout={handleLogout} onNav={navTo} onUpdated={handleUserUpdated} lang={lang} setLang={setLang} />;
+      default: return null;
     }
   };
 
@@ -1495,20 +1108,25 @@ export default function ZentraPortal() {
         <div className="topbar">
           <div className="topbar-logo">ZENTR<span>A</span></div>
           <div className="topbar-actions">
-            <div className="icon-btn" onClick={() => navTo("dashboard")}>
-              <div className="notif-dot" />
-              🔔
+            <div className="icon-btn">
+              <div className="notif-dot" />🔔
             </div>
-            <div className="icon-btn" onClick={() => navTo("profile")}>👤</div>
+            <div className="lang-toggle" style={{ position:"relative", top:"auto", right:"auto" }}>
+              <button className={`lang-btn ${lang==="en"?"active":""}`} onClick={() => { setLang("en"); api.updateMe({ language:"en" }).catch(()=>{}); }}>EN</button>
+              <button className={`lang-btn ${lang==="fr"?"active":""}`} onClick={() => { setLang("fr"); api.updateMe({ language:"fr" }).catch(()=>{}); }}>FR</button>
+            </div>
           </div>
         </div>
 
-        {renderScreen()}
+        {dataLoading && screen === "dashboard"
+          ? <div style={{ display:"flex", justifyContent:"center", padding:60 }}><span className="spinner" /></div>
+          : renderScreen()
+        }
 
         {mainScreens.includes(screen) && (
           <nav className="bottom-nav">
             {navItems.map(n => (
-              <button key={n.screen} className={`nav-item ${screen === n.screen ? "active" : ""}`} onClick={() => navTo(n.screen)}>
+              <button key={n.screen} className={`nav-item ${screen===n.screen?"active":""}`} onClick={() => navTo(n.screen)}>
                 <div className="nav-icon">{n.icon}</div>
                 <div className="nav-label">{n.label}</div>
               </button>

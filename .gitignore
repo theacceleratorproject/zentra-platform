@@ -8,6 +8,9 @@ __pycache__/
 .env
 venv/
 
+# SQLite
+*.db
+
 # Node
 node_modules/
 .next/
