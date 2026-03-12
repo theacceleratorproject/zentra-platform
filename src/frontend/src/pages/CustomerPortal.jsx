@@ -111,6 +111,12 @@ const T = {
     draftRestored: "Draft restored",
     createdBy: "Created by",
     infoSaved: "Information saved",
+    lowBalCount: "{count} accounts with low balance",
+    seeDetails: "See details",
+    hideDetails: "Hide details",
+    suspendedAccounts: "Suspended Account(s)",
+    moreOverdrafts: "and {n} more accounts overdrawn",
+    dismissAlert: "Dismiss",
   },
   fr: {
     appName: "ZENTRA",
@@ -221,6 +227,12 @@ const T = {
     draftRestored: "Brouillon restauré",
     createdBy: "Créé par",
     infoSaved: "Informations enregistrées",
+    lowBalCount: "{count} comptes à solde faible",
+    seeDetails: "Voir détails",
+    hideDetails: "Masquer",
+    suspendedAccounts: "Compte(s) Suspendu(s)",
+    moreOverdrafts: "et {n} autres comptes en découvert",
+    dismissAlert: "Ignorer",
   },
 };
 
@@ -1187,6 +1199,8 @@ function ProfilePage({ t, user, accounts, onLogout, onNav, onUpdated, lang, setL
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
 function Dashboard({ t, user, accounts, transactions, onNav, onSelectAccount, selectedAccount, pendingAccounts }) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [lowBalDismissed, setLowBalDismissed] = useState(false);
+  const [lowBalExpanded, setLowBalExpanded] = useState(false);
   const scrollRef = useRef(null);
   const heroRef = useRef(null);
 
@@ -1215,8 +1229,16 @@ function Dashboard({ t, user, accounts, transactions, onNav, onSelectAccount, se
   const liveSelected = selectedAccount ? accounts.find(a => a.id === selectedAccount.id) || selectedAccount : null;
   const totalBalance = accounts.reduce((s,a) => s + (parseFloat(a.balance) || 0), 0);
   const recentTxns   = transactions.slice(0,4);
-  const overdrawnAccts = accounts.filter(a => (parseFloat(a.balance) || 0) < 0);
-  const lowBalAccts    = accounts.filter(a => { const b = parseFloat(a.balance) || 0; return b >= 0 && b < 200; });
+  const overdrawnAccts  = accounts.filter(a => (parseFloat(a.balance) || 0) < 0);
+  const suspendedAccts  = accounts.filter(a => a.status !== "A");
+  const lowBalAccts     = accounts.filter(a => { const b = parseFloat(a.balance) || 0; return b >= 0 && b < 200 && a.status === "A"; });
+  const hasAlerts = overdrawnAccts.length > 0 || suspendedAccts.length > 0 || (lowBalAccts.length > 0 && !lowBalDismissed);
+
+  // Reset dismiss if low balance list changes
+  const lowBalKey = lowBalAccts.map(a => a.id).join(",");
+  useEffect(() => { setLowBalDismissed(false); }, [lowBalKey]);
+
+  const pillStyle = { display:"inline-block", fontFamily:"monospace", fontSize:10, color:"var(--gold)", background:"rgba(201,168,76,0.15)", border:"1px solid rgba(201,168,76,0.3)", borderRadius:12, padding:"2px 8px", margin:"2px 3px" };
 
   return (
     <div className="page">
@@ -1225,7 +1247,8 @@ function Dashboard({ t, user, accounts, transactions, onNav, onSelectAccount, se
         <div className="greeting-name">{user.name.split(" ")[0]}</div>
       </div>
 
-      {overdrawnAccts.map(a => (
+      {/* ── Priority 1: Overdraft (critical, individual, capped at 2 + summary) ── */}
+      {overdrawnAccts.slice(0, 2).map(a => (
         <div key={a.id} className="alert-card danger">
           <span>⚠️</span>
           <div>
@@ -1234,15 +1257,65 @@ function Dashboard({ t, user, accounts, transactions, onNav, onSelectAccount, se
           </div>
         </div>
       ))}
-      {lowBalAccts.map(a => (
-        <div key={a.id} className="alert-card">
-          <span>💛</span>
+      {overdrawnAccts.length > 2 && (
+        <div className="alert-card danger">
+          <span>⚠️</span>
           <div>
-            <div className="alert-title">{t.lowBalTitle} — {a.id}</div>
-            <div className="alert-body">{t.lowBalBody.replace("{bal}", fmtFull(a.balance))}</div>
+            <div className="alert-title">{t.overdraftTitle}</div>
+            <div className="alert-body">{t.moreOverdrafts.replace("{n}", overdrawnAccts.length - 2)}</div>
           </div>
         </div>
-      ))}
+      )}
+
+      {/* ── Priority 2: Suspended (consolidated) ── */}
+      {suspendedAccts.length > 0 && (
+        <div className="alert-card" style={{ background:"rgba(224,82,82,0.06)", borderColor:"rgba(224,82,82,0.2)" }}>
+          <span>⏸️</span>
+          <div>
+            <div className="alert-title">{t.suspendedAccounts}</div>
+            <div style={{ marginTop:6, lineHeight:2 }}>
+              {suspendedAccts.map(a => <span key={a.id} style={pillStyle}>{a.id}</span>)}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Priority 3: Low Balance (consolidated, dismissable) ── */}
+      {lowBalAccts.length > 0 && !lowBalDismissed && (
+        <div className="alert-card" style={{ position:"relative" }}>
+          <span>💛</span>
+          <div style={{ flex:1 }}>
+            {lowBalAccts.length === 1 ? (
+              <>
+                <div className="alert-title">{t.lowBalTitle} — {lowBalAccts[0].id}</div>
+                <div className="alert-body">{t.lowBalBody.replace("{bal}", fmtFull(lowBalAccts[0].balance))}</div>
+              </>
+            ) : (
+              <>
+                <div className="alert-title">{t.lowBalTitle} — {t.lowBalCount.replace("{count}", lowBalAccts.length)}</div>
+                <div style={{ marginTop:6, lineHeight:2 }}>
+                  {lowBalAccts.map(a => <span key={a.id} style={pillStyle}>{a.id}</span>)}
+                </div>
+                <button onClick={() => setLowBalExpanded(p => !p)} style={{ background:"none", border:"none", color:"var(--gold)", fontFamily:"DM Sans,sans-serif", fontSize:12, cursor:"pointer", padding:"6px 0 0", display:"flex", alignItems:"center", gap:4 }}>
+                  {lowBalExpanded ? t.hideDetails : t.seeDetails}
+                  <span style={{ fontSize:10, transition:"transform .2s", display:"inline-block", transform: lowBalExpanded ? "rotate(180deg)" : "none" }}>▾</span>
+                </button>
+                {lowBalExpanded && (
+                  <div style={{ marginTop:8 }}>
+                    {lowBalAccts.map(a => (
+                      <div key={a.id} style={{ fontSize:12, color:"var(--muted)", padding:"3px 0", display:"flex", justifyContent:"space-between" }}>
+                        <span style={{ fontFamily:"monospace", color:"var(--gold)" }}>{a.id}</span>
+                        <span>${fmt(parseFloat(a.balance) || 0)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          <button onClick={() => setLowBalDismissed(true)} title={t.dismissAlert} style={{ position:"absolute", top:10, right:12, background:"none", border:"none", color:"var(--muted)", cursor:"pointer", fontSize:14, padding:0, lineHeight:1 }}>×</button>
+        </div>
+      )}
 
       <div className="balance-hero" ref={heroRef}>
         {liveSelected ? (
