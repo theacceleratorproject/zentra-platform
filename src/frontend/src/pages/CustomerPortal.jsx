@@ -93,6 +93,9 @@ const T = {
     pendingLabel: "pending",
     accountOwner: "Account Owner",
     accountCreatedFor: "Account will be created for",
+    viewAllAccounts: "All accounts",
+    overdraftLimitLabel: "Overdraft limit",
+    noAccountsYet: "No accounts yet. Open your first account!",
   },
   fr: {
     appName: "ZENTRA",
@@ -185,6 +188,9 @@ const T = {
     pendingLabel: "en attente",
     accountOwner: "Propriétaire du Compte",
     accountCreatedFor: "Le compte sera créé pour",
+    viewAllAccounts: "Tous les comptes",
+    overdraftLimitLabel: "Découvert autorisé",
+    noAccountsYet: "Aucun compte. Ouvrez votre premier compte !",
   },
 };
 
@@ -1069,6 +1075,7 @@ function ProfilePage({ t, user, accounts, onLogout, onNav, onUpdated, lang, setL
 function Dashboard({ t, user, accounts, transactions, onNav, onSelectAccount, selectedAccount, pendingAccounts }) {
   const [searchQuery, setSearchQuery] = useState("");
   const scrollRef = useRef(null);
+  const heroRef = useRef(null);
 
   const filteredAccounts = searchQuery
     ? accounts.filter(a => a.id.toUpperCase().includes(("ZNT-" + searchQuery).toUpperCase()))
@@ -1091,7 +1098,7 @@ function Dashboard({ t, user, accounts, transactions, onNav, onSelectAccount, se
 
   const clearSearch = () => { setSearchQuery(""); onSelectAccount(null); };
 
-  const totalBalance = accounts.reduce((s,a) => s+a.balance, 0);
+  const totalBalance = accounts.reduce((s,a) => s + (parseFloat(a.balance) || 0), 0);
   const recentTxns   = transactions.slice(0,4);
   const overdrawnAccts = accounts.filter(a => a.balance < 0);
   const lowBalAccts    = accounts.filter(a => a.balance >= 0 && a.balance < 200);
@@ -1122,13 +1129,35 @@ function Dashboard({ t, user, accounts, transactions, onNav, onSelectAccount, se
         </div>
       ))}
 
-      <div className="balance-hero">
-        <div className="balance-label">{t.totalPortfolio}</div>
-        <div className="balance-amount">
-          <span style={{ fontSize:22, color:"var(--gold)", verticalAlign:"super", marginRight:4 }}>$</span>
-          {fmt(totalBalance).split(".")[0]}
-          <span className="balance-cents">.{fmt(totalBalance).split(".")[1]}</span>
-        </div>
+      <div className="balance-hero" ref={heroRef}>
+        {selectedAccount ? (
+          <>
+            <button onClick={() => onSelectAccount(null)} style={{ background:"none", border:"none", color:"var(--gold)", fontFamily:"DM Sans,sans-serif", fontSize:13, cursor:"pointer", padding:0, marginBottom:10, display:"flex", alignItems:"center", gap:4 }}>
+              ← {t.viewAllAccounts}
+            </button>
+            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
+              <span style={{ fontFamily:"monospace", fontSize:13, color:"var(--gold)" }}>{selectedAccount.id}</span>
+              <span style={{ fontSize:10, letterSpacing:2, textTransform:"uppercase", color:"var(--muted)" }}>{selectedAccount.type}</span>
+            </div>
+            <div className="balance-amount" style={{ color: (parseFloat(selectedAccount.balance)||0) < 0 ? "var(--red)" : "var(--white)" }}>
+              <span style={{ fontSize:22, color:"var(--gold)", verticalAlign:"super", marginRight:4 }}>$</span>
+              {fmt(parseFloat(selectedAccount.balance)||0).split(".")[0]}
+              <span className="balance-cents">.{fmt(parseFloat(selectedAccount.balance)||0).split(".")[1]}</span>
+            </div>
+            {(selectedAccount.overdraftLimit || 0) > 0 && (
+              <div style={{ fontSize:11, color:"var(--muted)", marginTop:6 }}>{t.overdraftLimitLabel}: ${fmt(selectedAccount.overdraftLimit)}</div>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="balance-label">{t.totalPortfolio}</div>
+            <div className="balance-amount">
+              <span style={{ fontSize:22, color:"var(--gold)", verticalAlign:"super", marginRight:4 }}>$</span>
+              {fmt(totalBalance).split(".")[0]}
+              <span className="balance-cents">.{fmt(totalBalance).split(".")[1]}</span>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="batch-bar">
@@ -1150,16 +1179,22 @@ function Dashboard({ t, user, accounts, transactions, onNav, onSelectAccount, se
       </div>
 
       <p className="section-title">{t.accounts}</p>
-      {filteredAccounts.length === 0 && searchQuery ? (
+      {accounts.length === 0 && !searchQuery ? (
+        <div style={{ textAlign:"center", padding:"32px 16px", background:"var(--navy3)", border:"1px solid var(--border)", borderRadius:14, marginBottom:20 }}>
+          <div style={{ fontSize:36, marginBottom:10 }}>🏦</div>
+          <div style={{ fontSize:14, color:"var(--muted)", marginBottom:16 }}>{t.noAccountsYet}</div>
+          <button className="btn-sm" onClick={() => onNav("new-account")}>+ {t.newAccount}</button>
+        </div>
+      ) : filteredAccounts.length === 0 && searchQuery ? (
         <div className="no-match-msg">{t.noAccountFound}</div>
       ) : (
         <div className="account-scroll" ref={scrollRef}>
           {filteredAccounts.map(a => (
-            <div key={a.id} data-acct={a.id} className={`account-pill ${selectedAccount?.id === a.id ? "active" : ""}`} onClick={() => { onSelectAccount(a); onNav("account-detail"); }}>
+            <div key={a.id} data-acct={a.id} className={`account-pill ${selectedAccount?.id === a.id ? "active" : ""}`} onClick={() => { if (selectedAccount?.id === a.id) { onNav("account-detail"); } else { onSelectAccount(a); heroRef.current?.scrollIntoView({ behavior:"smooth", block:"nearest" }); } }}>
               <div className="pill-type">{a.type}</div>
               <div className="pill-id">{a.id}</div>
-              <div className="pill-balance" style={{ color: a.balance<0?"var(--red)":"var(--white)" }}>
-                {fmtFull(a.balance)}
+              <div className="pill-balance" style={{ color: (parseFloat(a.balance)||0)<0?"var(--red)":"var(--white)" }}>
+                {fmtFull(parseFloat(a.balance)||0)}
                 {pendingAccounts?.has(a.id) && <span className="pending-badge">({t.pendingLabel})</span>}
               </div>
               <span className={`pill-status ${a.status==="A"?"active-s":"suspended-s"}`}>{a.status==="A"?t.active:t.suspended}</span>
@@ -1225,12 +1260,15 @@ export default function ZentraPortal() {
       .catch(() => setToken(null));
   }, []);
 
-  // Load real data when user is set
+  // Load real data when user is set — filter accounts by ownership
   useEffect(() => {
     if (!user) return;
     setDataLoading(true);
+    const ownedIds = user.account_ids || [];
     Promise.all([
-      api.getAccounts().then(d => setAccounts(d.accounts || [])).catch(() => {}),
+      api.getAccounts().then(d => {
+        setAccounts((d.accounts || []).filter(a => ownedIds.includes(a.id)));
+      }).catch(() => {}),
       api.getTransactions(null).then(d => setTransactions(d.transactions || [])).catch(() => {}),
     ]).finally(() => setDataLoading(false));
   }, [user]);
@@ -1241,8 +1279,11 @@ export default function ZentraPortal() {
   const handleLogout = () => { setUser(null); setAccounts([]); setTransactions([]); setScreen("dashboard"); };
   const handleAccountCreated = async () => {
     try {
+      const u = await api.getMe();
+      setUser(u);
       const data = await api.getAccounts();
-      setAccounts(data.accounts || []);
+      const ownedIds = u.account_ids || [];
+      setAccounts((data.accounts || []).filter(a => ownedIds.includes(a.id)));
     } catch {}
   };
   const handleUserUpdated = (u) => setUser(u);
@@ -1260,11 +1301,13 @@ export default function ZentraPortal() {
     const pending = new Set([fromId]);
     if (mode === "transfer" && toId) pending.add(toId);
     setPendingAccounts(pending);
-    // Re-fetch real balances after 3 seconds
+    // Re-fetch real balances after 3 seconds (filtered by ownership)
     setTimeout(async () => {
       try {
+        const u = await api.getMe();
         const data = await api.getAccounts();
-        setAccounts(data.accounts || []);
+        const ownedIds = u.account_ids || [];
+        setAccounts((data.accounts || []).filter(a => ownedIds.includes(a.id)));
       } catch {}
       setPendingAccounts(new Set());
     }, 3000);
