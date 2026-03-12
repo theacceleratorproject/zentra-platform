@@ -96,6 +96,9 @@ const T = {
     viewAllAccounts: "All accounts",
     overdraftLimitLabel: "Overdraft limit",
     noAccountsYet: "No accounts yet. Open your first account!",
+    confirmedBalance: "Confirmed",
+    pendingBalance: "Pending",
+    includesPending: "Includes pending transactions",
     holderName: "Account Holder Name",
     holderSection: "Account Holder",
     configSection: "Account Configuration",
@@ -217,6 +220,9 @@ const T = {
     viewAllAccounts: "Tous les comptes",
     overdraftLimitLabel: "Découvert autorisé",
     noAccountsYet: "Aucun compte. Ouvrez votre premier compte !",
+    confirmedBalance: "Solde confirmé",
+    pendingBalance: "En attente",
+    includesPending: "Inclut les transactions en attente",
     holderName: "Nom du Titulaire",
     holderSection: "Titulaire du Compte",
     configSection: "Configuration du Compte",
@@ -488,6 +494,39 @@ const sortAccounts = (list) => [...list].sort((a, b) => {
   if (ta !== tb) return ta - tb;
   return a.id.localeCompare(b.id);
 });
+// Compute live balance by adding pending (PND) transaction impacts to .dat balance
+const computeLiveBalance = (account, transactions) => {
+  const base = parseFloat(account.balance) || 0;
+  let pending = 0;
+  for (const txn of transactions) {
+    if (txn.status !== "PND") continue;
+    const amt = parseFloat(txn.amount) || 0;
+    if (txn.type === "DEP" && txn.account_id === account.id) pending += amt;
+    else if ((txn.type === "WDR" || txn.type === "WTH") && txn.account_id === account.id) pending -= amt;
+    else if (txn.type === "XFR" && txn.account_id === account.id) pending -= amt;
+    else if (txn.type === "XFR" && (txn.target_acct || txn.target_account) === account.id) pending += amt;
+    else if (txn.type === "FEE" && txn.account_id === account.id) pending -= amt;
+  }
+  return base + pending;
+};
+
+const getPendingSum = (account, transactions) => {
+  let pending = 0;
+  for (const txn of transactions) {
+    if (txn.status !== "PND") continue;
+    const amt = parseFloat(txn.amount) || 0;
+    if (txn.type === "DEP" && txn.account_id === account.id) pending += amt;
+    else if ((txn.type === "WDR" || txn.type === "WTH") && txn.account_id === account.id) pending -= amt;
+    else if (txn.type === "XFR" && txn.account_id === account.id) pending -= amt;
+    else if (txn.type === "XFR" && (txn.target_acct || txn.target_account) === account.id) pending += amt;
+    else if (txn.type === "FEE" && txn.account_id === account.id) pending -= amt;
+  }
+  return pending;
+};
+
+const hasPendingTxns = (account, transactions) =>
+  transactions.some(t => t.status === "PND" && (t.account_id === account.id || (t.target_acct || t.target_account) === account.id));
+
 const typeBadgeStyle = (type) => {
   const map = {
     CHECKING:    { background:"rgba(100,149,237,0.15)", color:"#6495ed" },
@@ -652,7 +691,7 @@ function TxnFlow({ t, accounts, onBack, mode, onTxnSuccess, defaultAccountId, la
       if (mode === "transfer") res = await api.transfer(acctId, toAcctId, amount, desc);
       setRef(res.reference);
       setStep("success");
-      if (onTxnSuccess) onTxnSuccess(mode, acctId, toAcctId, parseFloat(amount));
+      if (onTxnSuccess) onTxnSuccess(mode, acctId, toAcctId, parseFloat(amount), desc);
     } catch (e) {
       setError(translateError(e.message, lang));
       setStep("form");
@@ -910,7 +949,7 @@ function NewAccountPage({ t, user, onBack, onCreated }) {
 }
 
 // ─── ACCOUNT DETAIL ──────────────────────────────────────────────────────────
-function AccountDetailPage({ t, account, onBack, onNav, onSelectAccount }) {
+function AccountDetailPage({ t, account, onBack, onNav, onSelectAccount, transactions: allTxns }) {
   const [txns, setTxns] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -950,10 +989,30 @@ function AccountDetailPage({ t, account, onBack, onNav, onSelectAccount }) {
       </div>
 
       <div className="detail-card">
-        <div className="detail-balance" style={{ color: account.balance < 0 ? "var(--red)" : "var(--white)" }}>
-          <span style={{ fontSize: 20, color: "var(--gold)", verticalAlign: "super", marginRight: 4 }}>$</span>
-          {fmtFull(account.balance)}
-        </div>
+        {(() => {
+          const txnSource = allTxns || txns;
+          const liveBal = computeLiveBalance(account, txnSource);
+          const hasPnd = hasPendingTxns(account, txnSource);
+          const pndSum = getPendingSum(account, txnSource);
+          const datBal = parseFloat(account.balance) || 0;
+          return (
+            <>
+              <div className="detail-balance" style={{ color: liveBal < 0 ? "var(--red)" : "var(--white)", display:"flex", alignItems:"center", gap:8 }}>
+                <span>
+                  <span style={{ fontSize: 20, color: "var(--gold)", verticalAlign: "super", marginRight: 4 }}>$</span>
+                  {fmtFull(liveBal)}
+                </span>
+                {hasPnd && <span title={t.includesPending} style={{ width:6, height:6, borderRadius:"50%", background:"var(--gold)", display:"inline-block", animation:"pulse 2s infinite" }} />}
+              </div>
+              {hasPnd && (
+                <div style={{ fontSize:11, color:"var(--muted)", marginTop:2, marginBottom:8, display:"flex", gap:16, paddingLeft:2 }}>
+                  <span>{t.confirmedBalance}: ${fmtFull(datBal)}</span>
+                  <span style={{ color: pndSum >= 0 ? "var(--green)" : "var(--red)" }}>{t.pendingBalance}: {pndSum >= 0 ? "+" : ""}${fmtFull(pndSum)}</span>
+                </div>
+              )}
+            </>
+          );
+        })()}
         <div className="detail-row"><span>{t.owner}</span><span>{account.name}</span></div>
         <div className="detail-row"><span>{t.accounts}</span><span>{account.type}</span></div>
         <div className="detail-row"><span>{t.overdraftLimit}</span><span>${fmt(account.overdraftLimit || 0)}</span></div>
@@ -1320,7 +1379,8 @@ function Dashboard({ t, user, accounts, transactions, onNav, onSelectAccount, se
 
   // Derive live selected account from accounts array (selectedAccount state is a stale snapshot)
   const liveSelected = selectedAccount ? accounts.find(a => a.id === selectedAccount.id) || selectedAccount : null;
-  const totalBalance = accounts.reduce((s,a) => s + (parseFloat(a.balance) || 0), 0);
+  const totalBalance = accounts.reduce((s,a) => s + computeLiveBalance(a, transactions), 0);
+  const anyPending = transactions.some(t => t.status === "PND");
   const recentTxns   = transactions.slice(0,4);
   const overdrawnAccts  = accounts.filter(a => (parseFloat(a.balance) || 0) < 0);
   const suspendedAccts  = accounts.filter(a => a.status !== "A");
@@ -1411,27 +1471,45 @@ function Dashboard({ t, user, accounts, transactions, onNav, onSelectAccount, se
       )}
 
       <div className="balance-hero" ref={heroRef}>
-        {liveSelected ? (
+        {liveSelected ? (() => {
+          const liveBal = computeLiveBalance(liveSelected, transactions);
+          const hasPnd = hasPendingTxns(liveSelected, transactions);
+          const pndSum = getPendingSum(liveSelected, transactions);
+          const datBal = parseFloat(liveSelected.balance) || 0;
+          return (
+            <>
+              <button onClick={() => onSelectAccount(null)} style={{ background:"none", border:"none", color:"var(--gold)", fontFamily:"DM Sans,sans-serif", fontSize:13, cursor:"pointer", padding:0, marginBottom:10, display:"flex", alignItems:"center", gap:4 }}>
+                ← {t.viewAllAccounts}
+              </button>
+              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
+                <span style={{ fontFamily:"monospace", fontSize:13, color:"var(--gold)" }}>{liveSelected.id}</span>
+                <span style={{ fontSize:10, letterSpacing:2, textTransform:"uppercase", color:"var(--muted)" }}>{liveSelected.type}</span>
+              </div>
+              <div className="balance-amount" style={{ color: liveBal < 0 ? "var(--red)" : "var(--white)", display:"flex", alignItems:"center", gap:8 }}>
+                <span>
+                  <span style={{ fontSize:22, color:"var(--gold)", verticalAlign:"super", marginRight:4 }}>$</span>
+                  {fmt(liveBal).split(".")[0]}
+                  <span className="balance-cents">.{fmt(liveBal).split(".")[1]}</span>
+                </span>
+                {hasPnd && <span title={t.includesPending} style={{ width:6, height:6, borderRadius:"50%", background:"var(--gold)", display:"inline-block", animation:"pulse 2s infinite" }} />}
+              </div>
+              {hasPnd && (
+                <div style={{ fontSize:11, color:"var(--muted)", marginTop:4, display:"flex", gap:16 }}>
+                  <span>{t.confirmedBalance}: ${fmtFull(datBal)}</span>
+                  <span style={{ color: pndSum >= 0 ? "var(--green)" : "var(--red)" }}>{t.pendingBalance}: {pndSum >= 0 ? "+" : ""}${fmtFull(pndSum)}</span>
+                </div>
+              )}
+              {(liveSelected.overdraftLimit || 0) > 0 && (
+                <div style={{ fontSize:11, color:"var(--muted)", marginTop:6 }}>{t.overdraftLimitLabel}: ${fmt(liveSelected.overdraftLimit)}</div>
+              )}
+            </>
+          );
+        })() : (
           <>
-            <button onClick={() => onSelectAccount(null)} style={{ background:"none", border:"none", color:"var(--gold)", fontFamily:"DM Sans,sans-serif", fontSize:13, cursor:"pointer", padding:0, marginBottom:10, display:"flex", alignItems:"center", gap:4 }}>
-              ← {t.viewAllAccounts}
-            </button>
-            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
-              <span style={{ fontFamily:"monospace", fontSize:13, color:"var(--gold)" }}>{liveSelected.id}</span>
-              <span style={{ fontSize:10, letterSpacing:2, textTransform:"uppercase", color:"var(--muted)" }}>{liveSelected.type}</span>
+            <div className="balance-label" style={{ display:"flex", alignItems:"center", gap:8 }}>
+              {t.totalPortfolio}
+              {anyPending && <span title={t.includesPending} style={{ width:6, height:6, borderRadius:"50%", background:"var(--gold)", display:"inline-block", animation:"pulse 2s infinite" }} />}
             </div>
-            <div className="balance-amount" style={{ color: (parseFloat(liveSelected.balance)||0) < 0 ? "var(--red)" : "var(--white)" }}>
-              <span style={{ fontSize:22, color:"var(--gold)", verticalAlign:"super", marginRight:4 }}>$</span>
-              {fmt(parseFloat(liveSelected.balance)||0).split(".")[0]}
-              <span className="balance-cents">.{fmt(parseFloat(liveSelected.balance)||0).split(".")[1]}</span>
-            </div>
-            {(liveSelected.overdraftLimit || 0) > 0 && (
-              <div style={{ fontSize:11, color:"var(--muted)", marginTop:6 }}>{t.overdraftLimitLabel}: ${fmt(liveSelected.overdraftLimit)}</div>
-            )}
-          </>
-        ) : (
-          <>
-            <div className="balance-label">{t.totalPortfolio}</div>
             <div className="balance-amount">
               <span style={{ fontSize:22, color:"var(--gold)", verticalAlign:"super", marginRight:4 }}>$</span>
               {fmt(totalBalance).split(".")[0]}
@@ -1475,17 +1553,21 @@ function Dashboard({ t, user, accounts, transactions, onNav, onSelectAccount, se
         const closedAccts = sorted.filter(a => a.status === "C");
         const labelStyle = { display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minWidth:32, maxWidth:32, height:80, padding:0, background:"transparent", border:"none", cursor:"default", flexShrink:0 };
         const labelTextBase = { writingMode:"vertical-rl", textOrientation:"mixed", transform:"rotate(180deg)", fontSize:9, letterSpacing:2, textTransform:"uppercase", whiteSpace:"nowrap" };
-        const renderPill = (a, dimmed) => (
-          <div key={a.id} data-acct={a.id} className={`account-pill ${selectedAccount?.id === a.id ? "active" : ""}`} style={dimmed ? { opacity:0.4 } : {}} onClick={() => { if (selectedAccount?.id === a.id) { onNav("account-detail"); } else { onSelectAccount(a); heroRef.current?.scrollIntoView({ behavior:"smooth", block:"nearest" }); } }}>
-            <div className="pill-type">{a.type}</div>
-            <div className="pill-id">{a.id}</div>
-            <div className="pill-balance" style={{ color: (parseFloat(a.balance)||0)<0?"var(--red)":"var(--white)" }}>
-              {fmtFull(parseFloat(a.balance)||0)}
-              {pendingAccounts?.has(a.id) && <span className="pending-badge">({t.pendingLabel})</span>}
+        const renderPill = (a, dimmed) => {
+          const liveBal = computeLiveBalance(a, transactions);
+          const hasPnd = hasPendingTxns(a, transactions);
+          return (
+            <div key={a.id} data-acct={a.id} className={`account-pill ${selectedAccount?.id === a.id ? "active" : ""}`} style={dimmed ? { opacity:0.4 } : {}} onClick={() => { if (selectedAccount?.id === a.id) { onNav("account-detail"); } else { onSelectAccount(a); heroRef.current?.scrollIntoView({ behavior:"smooth", block:"nearest" }); } }}>
+              <div className="pill-type">{a.type}</div>
+              <div className="pill-id">{a.id}</div>
+              <div className="pill-balance" style={{ color: liveBal<0?"var(--red)":"var(--white)", display:"flex", alignItems:"center", gap:4 }}>
+                {fmtFull(liveBal)}
+                {hasPnd && <span title={t.includesPending} style={{ width:6, height:6, borderRadius:"50%", background:"var(--gold)", display:"inline-block", flexShrink:0, animation:"pulse 2s infinite" }} />}
+              </div>
+              <span className={`pill-status ${a.status==="A"?"active-s":"suspended-s"}`}>{a.status==="A"?t.active:t.suspended}</span>
             </div>
-            <span className={`pill-status ${a.status==="A"?"active-s":"suspended-s"}`}>{a.status==="A"?t.active:t.suspended}</span>
-          </div>
-        );
+          );
+        };
         return (
           <div className="account-scroll" ref={scrollRef}>
             {/* New Account CTA — always first */}
@@ -1590,18 +1672,23 @@ export default function ZentraPortal() {
   };
   const handleUserUpdated = (u) => setUser(u);
 
-  const handleTxnSuccess = useCallback((mode, fromId, toId, amount) => {
-    // Optimistic balance update — ACCOUNTS-MASTER.dat is only updated by
-    // nightly TXN-PROCESSOR batch, so re-fetching would overwrite correct
-    // optimistic values with stale pre-transaction balances.
-    setAccounts(prev => prev.map(a => {
-      if (mode === "deposit" && a.id === fromId) return { ...a, balance: (parseFloat(a.balance) || 0) + amount };
-      if (mode === "withdraw" && a.id === fromId) return { ...a, balance: (parseFloat(a.balance) || 0) - amount };
-      if (mode === "transfer" && a.id === fromId) return { ...a, balance: (parseFloat(a.balance) || 0) - amount };
-      if (mode === "transfer" && a.id === toId) return { ...a, balance: (parseFloat(a.balance) || 0) + amount };
-      return a;
-    }));
-    // Mark affected accounts as pending, clear after 3 seconds
+  const handleTxnSuccess = useCallback((mode, fromId, toId, amount, desc) => {
+    // Inject new transaction into local state so computeLiveBalance picks it up immediately.
+    // ACCOUNTS-MASTER.dat is only updated by nightly TXN-PROCESSOR batch,
+    // so the .dat balance stays stale — live balance = .dat balance + sum of PND transactions.
+    const today = new Date().toISOString().slice(0, 10);
+    const txnType = mode === "deposit" ? "DEP" : mode === "withdraw" ? "WDR" : "XFR";
+    const newTxn = {
+      account_id: fromId,
+      type: txnType,
+      amount: parseFloat(amount),
+      status: "PND",
+      date: today,
+      description: desc || `PORTAL ${mode.toUpperCase()}`,
+      target_acct: mode === "transfer" ? toId : "",
+    };
+    setTransactions(prev => [newTxn, ...prev]);
+    // Mark affected accounts as pending, clear badge after 3 seconds
     const pending = new Set([fromId]);
     if (mode === "transfer" && toId) pending.add(toId);
     setPendingAccounts(pending);
@@ -1634,7 +1721,7 @@ export default function ZentraPortal() {
       case "transfer":   return <TxnFlow t={t} lang={lang} accounts={accounts} onBack={() => navTo("dashboard")} mode="transfer" onTxnSuccess={handleTxnSuccess} defaultAccountId={selectedAccount?.id} />;
       case "history":    return <HistoryPage t={t} accounts={accounts} onBack={() => navTo("dashboard")} />;
       case "new-account": return <NewAccountPage t={t} user={user} onBack={() => navTo("dashboard")} onCreated={handleAccountCreated} />;
-      case "account-detail": return <AccountDetailPage t={t} account={selectedAccount} onBack={() => navTo("dashboard")} onNav={navTo} onSelectAccount={setSelectedAccount} />;
+      case "account-detail": return <AccountDetailPage t={t} account={selectedAccount} onBack={() => navTo("dashboard")} onNav={navTo} onSelectAccount={setSelectedAccount} transactions={transactions} />;
       case "profile":    return <ProfilePage t={t} user={user} accounts={accounts} onLogout={handleLogout} onNav={navTo} onUpdated={handleUserUpdated} lang={lang} setLang={setLang} />;
       default: return null;
     }

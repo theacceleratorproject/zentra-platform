@@ -31,14 +31,31 @@ export function AppSidebar() {
 
   return (
     <>
-      {/* Mobile hamburger */}
-      <button
-        onClick={() => setMobileOpen(true)}
-        className="fixed top-4 left-4 z-50 md:hidden p-2.5 bg-navy-900 border border-border rounded-lg"
-        aria-label="Open menu"
+      {/* Mobile top bar — clears content from hamburger area */}
+      <div
+        className="fixed top-0 left-0 right-0 h-14 z-40 md:hidden flex items-center px-4"
+        style={{
+          background: "rgba(10,15,30,0.96)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          borderBottom: "1px solid rgba(201,168,76,0.1)",
+        }}
       >
-        <Menu size={22} className="text-gold" />
-      </button>
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="p-2.5 bg-navy-900 border border-border rounded-lg"
+          style={{ minWidth: 44, minHeight: 44, display: "flex", alignItems: "center", justifyContent: "center" }}
+          aria-label="Open menu"
+        >
+          <Menu size={22} className="text-gold" />
+        </button>
+        <span
+          className="font-display text-lg font-bold text-gold tracking-wide"
+          style={{ position: "absolute", left: "50%", transform: "translateX(-50%)" }}
+        >
+          ZENTRA
+        </span>
+      </div>
 
       {/* Mobile overlay */}
       {mobileOpen && (

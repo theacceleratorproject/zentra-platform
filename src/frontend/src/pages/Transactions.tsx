@@ -121,14 +121,14 @@ export default function Transactions() {
           </div>
 
           {/* Step 2 */}
-          <div className={`zen-card p-4 md:p-5 relative ${!step1Done ? 'opacity-50 pointer-events-none' : ''} ${step2Done ? 'border-l-2' : ''}`} style={{ borderLeftColor: step2Done ? '#4ade80' : undefined }}>
+          <div className={`zen-card p-4 md:p-5 relative ${step2Done ? 'border-l-2 border-l-zen-green' : ''}`}>
             <div className="absolute -left-[25px] top-5 w-4 h-4 rounded-full bg-navy-800 border-2" style={{ borderColor: step2Done ? '#4ade80' : undefined, background: step2Done ? '#4ade80' : undefined }} />
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
                 <h3 className="font-semibold">{t.transactions.processTitle}</h3>
                 <p className="text-xs text-slate-500 font-mono mt-1">{t.transactions.processSub}</p>
               </div>
-              {!step2Done && step1Done && (
+              {!step2Done && (
                 <button onClick={runStep2} disabled={step2Loading} className="flex items-center gap-2 px-4 py-2.5 bg-gold-500 text-primary-foreground font-semibold rounded-lg text-sm hover:opacity-90 transition-opacity disabled:opacity-50 min-h-[44px] w-full sm:w-auto justify-center">
                   {step2Loading ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />} {t.transactions.runProcessing}
                 </button>
@@ -150,6 +150,7 @@ export default function Transactions() {
                 </div>
               </div>
             )}
+            <p className="text-xs text-slate-500 mt-3">{t.transactions.processNote}</p>
           </div>
         </div>
       )}
