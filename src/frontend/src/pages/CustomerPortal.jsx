@@ -117,6 +117,11 @@ const T = {
     suspendedAccounts: "Suspended Account(s)",
     moreOverdrafts: "and {n} more accounts overdrawn",
     dismissAlert: "Dismiss",
+    activeAccounts: "ACTIVE",
+    suspendedAccounts2: "SUSPENDED",
+    checkingBenefit: "Daily transactions + $500 overdraft",
+    savingsBenefit: "4.5% APY interest",
+    mmBenefit: "Premium 3.8% rate for $10,000+",
   },
   fr: {
     appName: "ZENTRA",
@@ -233,6 +238,11 @@ const T = {
     suspendedAccounts: "Compte(s) Suspendu(s)",
     moreOverdrafts: "et {n} autres comptes en découvert",
     dismissAlert: "Ignorer",
+    activeAccounts: "ACTIFS",
+    suspendedAccounts2: "SUSPENDUS",
+    checkingBenefit: "Transactions quotidiennes + découvert $500",
+    savingsBenefit: "Intérêts à 4.5% TAE",
+    mmBenefit: "Taux premium 3.8% pour soldes > 10 000$",
   },
 };
 
@@ -407,6 +417,24 @@ const greeting = (t) => {
 };
 const getToken = () => localStorage.getItem("zntr_token");
 const setToken = (tok) => tok ? localStorage.setItem("zntr_token", tok) : localStorage.removeItem("zntr_token");
+const TYPE_ORDER = { CHECKING:0, SAVINGS:1, MONEY_MARKET:2, BUSINESS:3 };
+const STATUS_ORDER = { A:0, S:1, C:2 };
+const sortAccounts = (list) => [...list].sort((a, b) => {
+  const sa = STATUS_ORDER[a.status] ?? 1, sb = STATUS_ORDER[b.status] ?? 1;
+  if (sa !== sb) return sa - sb;
+  const ta = TYPE_ORDER[a.type] ?? 99, tb = TYPE_ORDER[b.type] ?? 99;
+  if (ta !== tb) return ta - tb;
+  return a.id.localeCompare(b.id);
+});
+const typeBadgeStyle = (type) => {
+  const map = {
+    CHECKING:    { background:"rgba(100,149,237,0.15)", color:"#6495ed" },
+    SAVINGS:     { background:"rgba(76,175,130,0.15)",  color:"var(--green)" },
+    MONEY_MARKET:{ background:"rgba(201,168,76,0.15)",  color:"var(--gold)" },
+    BUSINESS:    { background:"rgba(147,112,219,0.15)", color:"#9370db" },
+  };
+  return { ...map[type] || map.CHECKING, fontSize:10, textTransform:"uppercase", letterSpacing:1.5, borderRadius:20, padding:"3px 10px", display:"inline-block" };
+};
 
 // ─── API ──────────────────────────────────────────────────────────────────────
 const BASE_URL = "/api";
@@ -696,9 +724,9 @@ function NewAccountPage({ t, user, onBack, onCreated }) {
   }, [form, user.email]);
 
   const types = [
-    { key:"CHECKING",    icon:"💳", label:t.checking,    desc:t.checkingDesc,   fee:"$12.00", od:"$500.00", rate:"0.05%" },
-    { key:"SAVINGS",     icon:"🏦", label:t.savings,     desc:t.savingsDesc,    fee:"$5.00",  od:t.noneOD,  rate:"2.15%" },
-    { key:"MONEY_MARKET",icon:"📈", label:t.moneyMarket, desc:t.mmDesc,         fee:"$15.00", od:t.noneOD,  rate:"3.80%" },
+    { key:"CHECKING",    icon:"💳", label:t.checking,    desc:t.checkingDesc,   fee:"$12.00", od:"$500.00", rate:"0.05%", benefit:t.checkingBenefit },
+    { key:"SAVINGS",     icon:"🏦", label:t.savings,     desc:t.savingsDesc,    fee:"$5.00",  od:t.noneOD,  rate:"2.15%", benefit:t.savingsBenefit },
+    { key:"MONEY_MARKET",icon:"📈", label:t.moneyMarket, desc:t.mmDesc,         fee:"$15.00", od:t.noneOD,  rate:"3.80%", benefit:t.mmBenefit },
   ];
   const selected = types.find(tp => tp.key === form.type);
   const purposes = [
@@ -773,6 +801,7 @@ function NewAccountPage({ t, user, onBack, onCreated }) {
           <div style={{ fontSize:28 }}>{a.icon}</div>
           <div style={{ flex:1 }}>
             <div style={{ fontWeight:500, marginBottom:4, fontSize:15 }}>{a.label}</div>
+            <div style={{ fontSize:11, color:"var(--gold)", marginBottom:4 }}>{a.benefit}</div>
             <div style={{ fontSize:12, color:"var(--muted)", lineHeight:1.5 }}>{a.desc}</div>
           </div>
           {form.type === a.key && <div style={{ color:"var(--gold)", fontSize:18, flexShrink:0 }}>✓</div>}
@@ -848,13 +877,15 @@ function AccountDetailPage({ t, account, onBack, onNav, onSelectAccount }) {
     <div className="page">
       <button className="back-btn" onClick={onBack}>← {t.back}</button>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-        <div style={{ fontFamily: "monospace", fontSize: 18, color: "var(--gold)" }}>{account.id}</div>
-        <span className={`pill-status ${account.status === "A" ? "active-s" : "suspended-s"}`}>
-          {account.status === "A" ? t.active : t.suspended}
-        </span>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ fontFamily: "monospace", fontSize: 18, color: "var(--gold)" }}>{account.id}</div>
+          <span className={`pill-status ${account.status === "A" ? "active-s" : "suspended-s"}`}>
+            {account.status === "A" ? t.active : t.suspended}
+          </span>
+        </div>
+        <span style={typeBadgeStyle(account.type)}>{account.type}</span>
       </div>
-      <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 20, textTransform: "uppercase", letterSpacing: 2 }}>{account.type}</div>
 
       <div className="detail-card">
         <div className="detail-balance" style={{ color: account.balance < 0 ? "var(--red)" : "var(--white)" }}>
@@ -1375,27 +1406,47 @@ function Dashboard({ t, user, accounts, transactions, onNav, onSelectAccount, se
         </div>
       ) : filteredAccounts.length === 0 && searchQuery ? (
         <div className="no-match-msg">{t.noAccountFound}</div>
-      ) : (
-        <div className="account-scroll" ref={scrollRef}>
-          {filteredAccounts.map(a => (
-            <div key={a.id} data-acct={a.id} className={`account-pill ${selectedAccount?.id === a.id ? "active" : ""}`} onClick={() => { if (selectedAccount?.id === a.id) { onNav("account-detail"); } else { onSelectAccount(a); heroRef.current?.scrollIntoView({ behavior:"smooth", block:"nearest" }); } }}>
-              <div className="pill-type">{a.type}</div>
-              <div className="pill-id">{a.id}</div>
-              <div className="pill-balance" style={{ color: (parseFloat(a.balance)||0)<0?"var(--red)":"var(--white)" }}>
-                {fmtFull(parseFloat(a.balance)||0)}
-                {pendingAccounts?.has(a.id) && <span className="pending-badge">({t.pendingLabel})</span>}
-              </div>
-              <span className={`pill-status ${a.status==="A"?"active-s":"suspended-s"}`}>{a.status==="A"?t.active:t.suspended}</span>
+      ) : (() => {
+        const sorted = sortAccounts(filteredAccounts);
+        const activeAccts = sorted.filter(a => a.status === "A");
+        const suspAccts = sorted.filter(a => a.status === "S" || (a.status !== "A" && a.status !== "C"));
+        const closedAccts = sorted.filter(a => a.status === "C");
+        const labelStyle = { minWidth:"auto", flexShrink:0, display:"flex", alignItems:"center", padding:"0 4px", whiteSpace:"nowrap" };
+        const renderPill = (a, dimmed) => (
+          <div key={a.id} data-acct={a.id} className={`account-pill ${selectedAccount?.id === a.id ? "active" : ""}`} style={dimmed ? { opacity:0.4 } : {}} onClick={() => { if (selectedAccount?.id === a.id) { onNav("account-detail"); } else { onSelectAccount(a); heroRef.current?.scrollIntoView({ behavior:"smooth", block:"nearest" }); } }}>
+            <div className="pill-type">{a.type}</div>
+            <div className="pill-id">{a.id}</div>
+            <div className="pill-balance" style={{ color: (parseFloat(a.balance)||0)<0?"var(--red)":"var(--white)" }}>
+              {fmtFull(parseFloat(a.balance)||0)}
+              {pendingAccounts?.has(a.id) && <span className="pending-badge">({t.pendingLabel})</span>}
             </div>
-          ))}
-          <div className="account-pill" style={{ borderStyle:"dashed", display:"flex", alignItems:"center", justifyContent:"center" }} onClick={() => onNav("new-account")}>
-            <div style={{ textAlign:"center" }}>
-              <div style={{ fontSize:24, marginBottom:6 }}>+</div>
-              <div style={{ fontSize:11, color:"var(--muted)" }}>{t.newAccount}</div>
-            </div>
+            <span className={`pill-status ${a.status==="A"?"active-s":"suspended-s"}`}>{a.status==="A"?t.active:t.suspended}</span>
           </div>
-        </div>
-      )}
+        );
+        return (
+          <div className="account-scroll" ref={scrollRef}>
+            {/* New Account CTA — always first */}
+            <div onClick={() => onNav("new-account")} style={{ minWidth:160, border:"2px dashed var(--gold)", borderRadius:14, padding:16, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, background:"transparent", transition:"background .2s", scrollSnapAlign:"start" }} onMouseEnter={e => e.currentTarget.style.background="rgba(201,168,76,0.08)"} onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+              <div style={{ textAlign:"center" }}>
+                <div style={{ fontSize:28, color:"var(--gold)", marginBottom:6 }}>+</div>
+                <div style={{ fontSize:11, color:"var(--gold)", letterSpacing:1 }}>{t.newAccount}</div>
+              </div>
+            </div>
+            {/* Active label */}
+            {activeAccts.length > 0 && (
+              <div style={labelStyle}><span style={{ fontSize:9, letterSpacing:2.5, textTransform:"uppercase", color:"var(--gold)" }}>{t.activeAccounts} ({activeAccts.length})</span></div>
+            )}
+            {activeAccts.map(a => renderPill(a, false))}
+            {/* Suspended label */}
+            {suspAccts.length > 0 && (
+              <div style={labelStyle}><span style={{ fontSize:9, letterSpacing:2.5, textTransform:"uppercase", color:"var(--muted)" }}>{t.suspendedAccounts2} ({suspAccts.length})</span></div>
+            )}
+            {suspAccts.map(a => renderPill(a, false))}
+            {/* Closed — dimmed */}
+            {closedAccts.map(a => renderPill(a, true))}
+          </div>
+        );
+      })()}
 
       <p className="section-title">{t.quickActions}</p>
       <div className="quick-actions">
