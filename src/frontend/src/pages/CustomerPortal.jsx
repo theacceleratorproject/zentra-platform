@@ -96,6 +96,21 @@ const T = {
     viewAllAccounts: "All accounts",
     overdraftLimitLabel: "Overdraft limit",
     noAccountsYet: "No accounts yet. Open your first account!",
+    holderName: "Account Holder Name",
+    holderSection: "Account Holder",
+    configSection: "Account Configuration",
+    additionalSection: "Additional Information",
+    optional: "Optional",
+    dob: "Date of Birth",
+    address: "Address",
+    accountPurpose: "Account Purpose",
+    purposePersonal: "Personal", purposeBusiness: "Business",
+    purposeSavings: "Savings Goal", purposeEmergency: "Emergency Fund", purposeOther: "Other",
+    nameRequired: "Name required",
+    openAccountBtn: "Open Account",
+    draftRestored: "Draft restored",
+    createdBy: "Created by",
+    infoSaved: "Information saved",
   },
   fr: {
     appName: "ZENTRA",
@@ -191,6 +206,21 @@ const T = {
     viewAllAccounts: "Tous les comptes",
     overdraftLimitLabel: "Découvert autorisé",
     noAccountsYet: "Aucun compte. Ouvrez votre premier compte !",
+    holderName: "Nom du Titulaire",
+    holderSection: "Titulaire du Compte",
+    configSection: "Configuration du Compte",
+    additionalSection: "Informations Complémentaires",
+    optional: "Optionnel",
+    dob: "Date de Naissance",
+    address: "Adresse",
+    accountPurpose: "Objet du Compte",
+    purposePersonal: "Personnel", purposeBusiness: "Professionnel",
+    purposeSavings: "Objectif d'épargne", purposeEmergency: "Fonds d'urgence", purposeOther: "Autre",
+    nameRequired: "Nom requis",
+    openAccountBtn: "Ouvrir le Compte",
+    draftRestored: "Brouillon restauré",
+    createdBy: "Créé par",
+    infoSaved: "Informations enregistrées",
   },
 };
 
@@ -618,23 +648,66 @@ function TxnFlow({ t, accounts, onBack, mode, onTxnSuccess, defaultAccountId }) 
 
 // ─── NEW ACCOUNT ─────────────────────────────────────────────────────────────
 function NewAccountPage({ t, user, onBack, onCreated }) {
-  const [type, setType] = useState("CHECKING");
+  const [form, setForm] = useState({ holderName: user.name, type: "CHECKING", phone: "", dob: "", address: "", purpose: "" });
   const [loading, setLoading] = useState(false);
   const [created, setCreated] = useState(null);
   const [error, setError] = useState("");
+  const [nameError, setNameError] = useState("");
+  const [draftBanner, setDraftBanner] = useState(false);
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  // Restore draft on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("zntr_acct_draft");
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (draft.createdBy !== user.email) return;
+      setForm({
+        holderName: draft.holderName || user.name,
+        type: draft.type || "CHECKING",
+        phone: draft.phone || "",
+        dob: draft.dob || "",
+        address: draft.address || "",
+        purpose: draft.purpose || "",
+      });
+      setDraftBanner(true);
+    } catch {}
+  }, []);
+
+  // Save draft on form change
+  useEffect(() => {
+    localStorage.setItem("zntr_acct_draft", JSON.stringify({
+      ...form, createdBy: user.email, createdAt: new Date().toISOString(),
+    }));
+  }, [form, user.email]);
 
   const types = [
     { key:"CHECKING",    icon:"💳", label:t.checking,    desc:t.checkingDesc,   fee:"$12.00", od:"$500.00", rate:"0.05%" },
     { key:"SAVINGS",     icon:"🏦", label:t.savings,     desc:t.savingsDesc,    fee:"$5.00",  od:t.noneOD,  rate:"2.15%" },
     { key:"MONEY_MARKET",icon:"📈", label:t.moneyMarket, desc:t.mmDesc,         fee:"$15.00", od:t.noneOD,  rate:"3.80%" },
   ];
-  const selected = types.find(t => t.key === type);
+  const selected = types.find(tp => tp.key === form.type);
+  const purposes = [
+    { key:"", label:"—" },
+    { key:"personal", label:t.purposePersonal },
+    { key:"business", label:t.purposeBusiness },
+    { key:"savings", label:t.purposeSavings },
+    { key:"emergency", label:t.purposeEmergency },
+    { key:"other", label:t.purposeOther },
+  ];
+  const today = new Date().toISOString().split("T")[0];
+  const canSubmit = form.holderName.trim().length >= 2 && !loading;
 
   const create = async () => {
+    if (form.holderName.trim().length < 2) { setNameError(t.nameRequired); return; }
+    setNameError("");
     setLoading(true); setError("");
     try {
-      const res = await api.createAccount(user.name, type);
+      const res = await api.createAccount(form.holderName.trim(), form.type);
       await api.linkAccount(res.id);
+      localStorage.removeItem("zntr_acct_draft");
       setCreated(res);
       if (onCreated) onCreated();
     } catch(e) { setError(e.message); }
@@ -646,12 +719,17 @@ function NewAccountPage({ t, user, onBack, onCreated }) {
       <div className="success-screen">
         <div className="success-ring">✓</div>
         <div className="success-title">{t.openNewAccount}</div>
-        <div className="success-sub">{created.type}</div>
         <div className="success-ref">{created.id}</div>
+        <div style={{ fontSize:15, marginBottom:4 }}>{form.holderName}</div>
+        <div className="success-sub">{created.type}</div>
+        <div style={{ fontSize:12, color:"var(--muted)", marginBottom:6 }}>{t.createdBy}: {user.email}</div>
+        <div style={{ fontSize:12, color:"var(--green)", marginBottom:24 }}>{t.infoSaved}</div>
         <button className="btn-primary" onClick={onBack}>{t.backToDash}</button>
       </div>
     </div>
   );
+
+  const optFieldStyle = { borderStyle: "dashed" };
 
   return (
     <div className="page">
@@ -660,25 +738,36 @@ function NewAccountPage({ t, user, onBack, onCreated }) {
       <div className="page-subtitle">{t.openNewSub}</div>
       {error && <div className="error-msg">{error}</div>}
 
-      <div className="field" style={{ marginBottom: 20 }}>
-        <label>🔒 {t.accountOwner}</label>
-        <input type="text" value={user.name} disabled style={{ opacity: 0.6 }} />
-        <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{t.accountCreatedFor} {user.name}</div>
+      {draftBanner && (
+        <div style={{ background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.2)", borderRadius:10, padding:"10px 14px", display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16, fontSize:13, color:"var(--gold)" }}>
+          <span>{t.draftRestored}</span>
+          <button onClick={() => setDraftBanner(false)} style={{ background:"none", border:"none", color:"var(--muted)", cursor:"pointer", fontSize:16, padding:0, lineHeight:1 }}>×</button>
+        </div>
+      )}
+
+      {/* ── Account Holder ── */}
+      <div className="section-title" style={{ color:"var(--gold)", marginBottom:12 }}>{t.holderSection}</div>
+      <div className="field">
+        <label>{t.holderName} *</label>
+        <input type="text" value={form.holderName} onChange={e => { set("holderName", e.target.value); setNameError(""); }} placeholder="Jean Dupont" />
+        {nameError && <div style={{ fontSize:12, color:"var(--red)", marginTop:4 }}>{nameError}</div>}
       </div>
 
+      {/* ── Account Configuration ── */}
+      <div className="section-title" style={{ color:"var(--gold)", marginTop:20, marginBottom:12 }}>{t.configSection}</div>
       {types.map(a => (
-        <div key={a.key} onClick={() => setType(a.key)}
-          style={{ background: type===a.key ? "rgba(201,168,76,0.06)" : "var(--navy3)", border:`1px solid ${type===a.key?"var(--gold)":"var(--border)"}`, borderRadius:14, padding:"18px 16px", marginBottom:10, cursor:"pointer", display:"flex", gap:14, alignItems:"flex-start", transition:"all .2s" }}>
+        <div key={a.key} onClick={() => set("type", a.key)}
+          style={{ background: form.type===a.key ? "rgba(201,168,76,0.06)" : "var(--navy3)", border:`1px solid ${form.type===a.key?"var(--gold)":"var(--border)"}`, borderRadius:14, padding:"18px 16px", marginBottom:10, cursor:"pointer", display:"flex", gap:14, alignItems:"flex-start", transition:"all .2s" }}>
           <div style={{ fontSize:28 }}>{a.icon}</div>
           <div style={{ flex:1 }}>
             <div style={{ fontWeight:500, marginBottom:4, fontSize:15 }}>{a.label}</div>
             <div style={{ fontSize:12, color:"var(--muted)", lineHeight:1.5 }}>{a.desc}</div>
           </div>
-          {type === a.key && <div style={{ color:"var(--gold)", fontSize:18, flexShrink:0 }}>✓</div>}
+          {form.type === a.key && <div style={{ color:"var(--gold)", fontSize:18, flexShrink:0 }}>✓</div>}
         </div>
       ))}
       {selected && (
-        <div className="confirm-box" style={{ marginTop:16 }}>
+        <div className="confirm-box" style={{ marginTop:6 }}>
           <div className="section-title" style={{ marginBottom:8 }}>{t.accountTerms}</div>
           <div className="confirm-row"><span>{t.monthlyFee}</span><span>{selected.fee}</span></div>
           <div className="confirm-row"><span>{t.overdraftLimit}</span><span>{selected.od}</span></div>
@@ -686,8 +775,32 @@ function NewAccountPage({ t, user, onBack, onCreated }) {
           <div className="confirm-row"><span>Processing</span><span>{t.cobolProcessing}</span></div>
         </div>
       )}
-      <button className="btn-primary" onClick={create} disabled={loading}>
-        {loading ? <><span className="spinner" /></> : `${t.openBtn} ${selected?.label}`}
+
+      {/* ── Additional Information (Optional) ── */}
+      <div className="section-title" style={{ color:"var(--gold)", marginTop:24, marginBottom:12 }}>
+        {t.additionalSection} <span style={{ color:"var(--muted)", fontSize:10, fontWeight:400, letterSpacing:1 }}>({t.optional})</span>
+      </div>
+      <div className="field">
+        <label>{t.phone}</label>
+        <input type="tel" value={form.phone} onChange={e => set("phone", e.target.value)} placeholder="+509 5550 0000" style={optFieldStyle} />
+      </div>
+      <div className="field">
+        <label>{t.dob}</label>
+        <input type="date" value={form.dob} onChange={e => set("dob", e.target.value)} max={today} style={optFieldStyle} />
+      </div>
+      <div className="field">
+        <label>{t.address}</label>
+        <input type="text" value={form.address} onChange={e => set("address", e.target.value)} placeholder="123 Main St, Plaine Du Nord, Nord" style={optFieldStyle} />
+      </div>
+      <div className="field">
+        <label>{t.accountPurpose}</label>
+        <select value={form.purpose} onChange={e => set("purpose", e.target.value)} style={optFieldStyle}>
+          {purposes.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
+        </select>
+      </div>
+
+      <button className="btn-primary" style={{ marginTop:16 }} onClick={create} disabled={!canSubmit}>
+        {loading ? <><span className="spinner" /></> : t.openAccountBtn}
       </button>
     </div>
   );
