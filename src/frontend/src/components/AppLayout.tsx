@@ -5,7 +5,7 @@ export function AppLayout() {
   return (
     <div className="min-h-screen bg-navy-950 flex">
       <AppSidebar />
-      <main className="flex-1 ml-60 p-9 overflow-auto page-enter">
+      <main className="flex-1 ml-0 md:ml-60 p-4 pt-16 md:pt-9 md:p-9 overflow-x-hidden page-enter">
         <Outlet />
       </main>
     </div>

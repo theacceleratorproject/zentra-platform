@@ -71,12 +71,12 @@ export default function Transactions() {
 
   return (
     <div className="space-y-8">
-      <h1 className="font-display text-3xl font-bold">{t.transactions.title}</h1>
+      <h1 className="font-display text-2xl md:text-3xl font-bold">{t.transactions.title}</h1>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-border">
+      <div className="flex gap-1 border-b border-border overflow-x-auto">
         {tabs.map(tb => (
-          <button key={tb.key} onClick={() => setTab(tb.key)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${tab === tb.key ? 'border-primary text-gold' : 'border-transparent text-slate-500 hover:text-slate-300'}`}>
+          <button key={tb.key} onClick={() => setTab(tb.key)} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap min-h-[44px] ${tab === tb.key ? 'border-primary text-gold' : 'border-transparent text-slate-500 hover:text-slate-300'}`}>
             {tb.label}
           </button>
         ))}
@@ -89,15 +89,15 @@ export default function Transactions() {
           <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-border" />
 
           {/* Step 1 */}
-          <div className={`zen-card p-5 mb-5 relative ${step1Done ? 'border-l-2 border-l-zen-green' : ''}`}>
+          <div className={`zen-card p-4 md:p-5 mb-5 relative ${step1Done ? 'border-l-2 border-l-zen-green' : ''}`}>
             <div className="absolute -left-[25px] top-5 w-4 h-4 rounded-full bg-navy-800 border-2" style={{ borderColor: step1Done ? '#4ade80' : undefined, background: step1Done ? '#4ade80' : undefined }} />
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
                 <h3 className="font-semibold">{t.transactions.validateTitle}</h3>
                 <p className="text-xs text-slate-500 font-mono mt-1">{t.transactions.validateSub}</p>
               </div>
               {!step1Done && (
-                <button onClick={runStep1} disabled={step1Loading} className="flex items-center gap-2 px-4 py-2 bg-gold-500 text-primary-foreground font-semibold rounded-lg text-sm hover:opacity-90 transition-opacity disabled:opacity-50">
+                <button onClick={runStep1} disabled={step1Loading} className="flex items-center gap-2 px-4 py-2.5 bg-gold-500 text-primary-foreground font-semibold rounded-lg text-sm hover:opacity-90 transition-opacity disabled:opacity-50 min-h-[44px] w-full sm:w-auto justify-center">
                   {step1Loading ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />} {t.transactions.runValidation}
                 </button>
               )}
@@ -121,15 +121,15 @@ export default function Transactions() {
           </div>
 
           {/* Step 2 */}
-          <div className={`zen-card p-5 relative ${!step1Done ? 'opacity-50 pointer-events-none' : ''} ${step2Done ? 'border-l-2' : ''}`} style={{ borderLeftColor: step2Done ? '#4ade80' : undefined }}>
+          <div className={`zen-card p-4 md:p-5 relative ${!step1Done ? 'opacity-50 pointer-events-none' : ''} ${step2Done ? 'border-l-2' : ''}`} style={{ borderLeftColor: step2Done ? '#4ade80' : undefined }}>
             <div className="absolute -left-[25px] top-5 w-4 h-4 rounded-full bg-navy-800 border-2" style={{ borderColor: step2Done ? '#4ade80' : undefined, background: step2Done ? '#4ade80' : undefined }} />
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
                 <h3 className="font-semibold">{t.transactions.processTitle}</h3>
                 <p className="text-xs text-slate-500 font-mono mt-1">{t.transactions.processSub}</p>
               </div>
               {!step2Done && step1Done && (
-                <button onClick={runStep2} disabled={step2Loading} className="flex items-center gap-2 px-4 py-2 bg-gold-500 text-primary-foreground font-semibold rounded-lg text-sm hover:opacity-90 transition-opacity disabled:opacity-50">
+                <button onClick={runStep2} disabled={step2Loading} className="flex items-center gap-2 px-4 py-2.5 bg-gold-500 text-primary-foreground font-semibold rounded-lg text-sm hover:opacity-90 transition-opacity disabled:opacity-50 min-h-[44px] w-full sm:w-auto justify-center">
                   {step2Loading ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />} {t.transactions.runProcessing}
                 </button>
               )}
@@ -158,7 +158,7 @@ export default function Transactions() {
       {tab === 'ledger' && (
         <div className="space-y-4">
           {!ledger && (
-            <button onClick={loadLedger} disabled={ledgerLoading} className="flex items-center gap-2 px-4 py-2 bg-gold-500 text-primary-foreground font-semibold rounded-lg text-sm hover:opacity-90 transition-opacity disabled:opacity-50">
+            <button onClick={loadLedger} disabled={ledgerLoading} className="flex items-center gap-2 px-4 py-2.5 bg-gold-500 text-primary-foreground font-semibold rounded-lg text-sm hover:opacity-90 transition-opacity disabled:opacity-50 min-h-[44px] w-full sm:w-auto justify-center">
               {ledgerLoading ? <Loader2 size={14} className="animate-spin" /> : null} {t.transactions.ledger}
             </button>
           )}
@@ -178,7 +178,7 @@ export default function Transactions() {
       {tab === 'rejected' && (
         <div className="space-y-4">
           {!rejected && (
-            <button onClick={loadRejected} disabled={rejLoading} className="flex items-center gap-2 px-4 py-2 bg-gold-500 text-primary-foreground font-semibold rounded-lg text-sm hover:opacity-90 transition-opacity disabled:opacity-50">
+            <button onClick={loadRejected} disabled={rejLoading} className="flex items-center gap-2 px-4 py-2.5 bg-gold-500 text-primary-foreground font-semibold rounded-lg text-sm hover:opacity-90 transition-opacity disabled:opacity-50 min-h-[44px] w-full sm:w-auto justify-center">
               {rejLoading ? <Loader2 size={14} className="animate-spin" /> : null} {t.transactions.rejected}
             </button>
           )}
@@ -208,7 +208,7 @@ export default function Transactions() {
                   </tbody>
                 </table>
               </div>
-              <div className="text-xs text-slate-500 font-mono space-x-4">
+              <div className="text-xs text-slate-500 font-mono flex flex-wrap gap-x-4 gap-y-1">
                 {errorLegend.map(e => (
                   <span key={e.code}><span className="text-zen-red">{e.code}</span> {e.desc}</span>
                 ))}

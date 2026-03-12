@@ -16,11 +16,11 @@ export default function Reports() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-display text-3xl font-bold">{t.reports.title}</h1>
+      <h1 className="font-display text-2xl md:text-3xl font-bold">{t.reports.title}</h1>
 
       {/* Fee Engine */}
-      <div className="zen-card p-5">
-        <div className="flex items-center justify-between">
+      <div className="zen-card p-4 md:p-5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <DollarSign size={20} className="text-gold" />
             <div>
@@ -29,13 +29,13 @@ export default function Reports() {
             </div>
           </div>
           {!feesData && (
-            <button onClick={async () => { setFeesLoading(true); setFeesData(await api.runFees()); setFeesLoading(false); }} disabled={feesLoading} className="flex items-center gap-2 px-4 py-2 bg-gold-500 text-primary-foreground font-semibold rounded-lg text-sm hover:opacity-90 disabled:opacity-50">
+            <button onClick={async () => { setFeesLoading(true); setFeesData(await api.runFees()); setFeesLoading(false); }} disabled={feesLoading} className="flex items-center gap-2 px-4 py-2.5 bg-gold-500 text-primary-foreground font-semibold rounded-lg text-sm hover:opacity-90 disabled:opacity-50 min-h-[44px] w-full sm:w-auto justify-center">
               {feesLoading ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />} {t.reports.generateFees}
             </button>
           )}
         </div>
         {feesData && (
-          <div className="grid grid-cols-4 gap-3 mt-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
             <div className="bg-navy-700/50 rounded-lg p-3 text-center"><p className="text-xs text-slate-500">{t.reports.maintenanceFee}</p><p className="font-mono text-lg font-semibold">{feesData.maintenance}</p></div>
             <div className="bg-navy-700/50 rounded-lg p-3 text-center"><p className="text-xs text-slate-500">{t.reports.lowBalanceFee}</p><p className="font-mono text-lg font-semibold">{feesData.low_balance}</p></div>
             <div className="bg-navy-700/50 rounded-lg p-3 text-center"><p className="text-xs text-slate-500">{t.reports.overdraftFee}</p><p className="font-mono text-lg font-semibold">{feesData.overdraft}</p></div>
@@ -45,8 +45,8 @@ export default function Reports() {
       </div>
 
       {/* Interest Calculator */}
-      <div className="zen-card p-5">
-        <div className="flex items-center justify-between">
+      <div className="zen-card p-4 md:p-5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <TrendingUp size={20} className="text-gold" />
             <div>
@@ -55,7 +55,7 @@ export default function Reports() {
             </div>
           </div>
           {!intData && (
-            <button onClick={async () => { setIntLoading(true); setIntData(await api.runInterest()); setIntLoading(false); }} disabled={intLoading} className="flex items-center gap-2 px-4 py-2 bg-gold-500 text-primary-foreground font-semibold rounded-lg text-sm hover:opacity-90 disabled:opacity-50">
+            <button onClick={async () => { setIntLoading(true); setIntData(await api.runInterest()); setIntLoading(false); }} disabled={intLoading} className="flex items-center gap-2 px-4 py-2.5 bg-gold-500 text-primary-foreground font-semibold rounded-lg text-sm hover:opacity-90 disabled:opacity-50 min-h-[44px] w-full sm:w-auto justify-center">
               {intLoading ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />} {t.reports.generateInterest}
             </button>
           )}
@@ -69,8 +69,8 @@ export default function Reports() {
       </div>
 
       {/* EOD Report */}
-      <div className="zen-card p-5">
-        <div className="flex items-center justify-between">
+      <div className="zen-card p-4 md:p-5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <FileText size={20} className="text-gold" />
             <div>
@@ -79,7 +79,7 @@ export default function Reports() {
             </div>
           </div>
           {!eodData && (
-            <button onClick={async () => { setEodLoading(true); setEodData(await api.getEOD()); setEodLoading(false); }} disabled={eodLoading} className="flex items-center gap-2 px-4 py-2 bg-gold-500 text-primary-foreground font-semibold rounded-lg text-sm hover:opacity-90 disabled:opacity-50">
+            <button onClick={async () => { setEodLoading(true); setEodData(await api.getEOD()); setEodLoading(false); }} disabled={eodLoading} className="flex items-center gap-2 px-4 py-2.5 bg-gold-500 text-primary-foreground font-semibold rounded-lg text-sm hover:opacity-90 disabled:opacity-50 min-h-[44px] w-full sm:w-auto justify-center">
               {eodLoading ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />} {t.reports.generateEOD}
             </button>
           )}
@@ -98,14 +98,14 @@ export default function Reports() {
       </div>
 
       {/* Output Files */}
-      <div className="zen-card p-5">
-        <div className="flex items-center justify-between mb-4">
+      <div className="zen-card p-4 md:p-5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-3">
             <FolderOpen size={20} className="text-gold" />
             <h3 className="font-semibold">{t.reports.reportOutput}</h3>
           </div>
           {!files && (
-            <button onClick={async () => { setFilesLoading(true); setFiles((await api.getFiles()).files); setFilesLoading(false); }} disabled={filesLoading} className="flex items-center gap-2 px-4 py-2 border border-border text-foreground font-medium rounded-lg text-sm hover:border-primary/30 hover:text-gold transition-colors disabled:opacity-50">
+            <button onClick={async () => { setFilesLoading(true); setFiles((await api.getFiles()).files); setFilesLoading(false); }} disabled={filesLoading} className="flex items-center gap-2 px-4 py-2.5 border border-border text-foreground font-medium rounded-lg text-sm hover:border-primary/30 hover:text-gold transition-colors disabled:opacity-50 min-h-[44px] w-full sm:w-auto justify-center">
               {filesLoading ? <Loader2 size={14} className="animate-spin" /> : null} {t.common.refresh}
             </button>
           )}

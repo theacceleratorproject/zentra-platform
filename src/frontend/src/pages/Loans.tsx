@@ -69,11 +69,11 @@ export default function Loans() {
 
   return (
     <div className="space-y-8">
-      <h1 className="font-display text-3xl font-bold">{t.loans.title}</h1>
+      <h1 className="font-display text-2xl md:text-3xl font-bold">{t.loans.title}</h1>
 
-      <div className="flex gap-6">
+      <div className="flex flex-col md:flex-row gap-5 md:gap-6">
         {/* Left panel */}
-        <div className="w-[340px] shrink-0 space-y-5">
+        <div className="w-full md:w-[340px] md:shrink-0 space-y-5">
           <div className="zen-card p-5">
             <h3 className="text-sm font-semibold text-slate-300 mb-3 uppercase tracking-wider">{t.loans.presets}</h3>
             <div className="space-y-2">
@@ -101,7 +101,7 @@ export default function Loans() {
               <label className="text-xs text-slate-500 uppercase tracking-wider">{t.loans.termYears}</label>
               <input type="number" min={1} max={30} value={years || ''} onChange={e => setYears(Number(e.target.value))} className="w-full mt-1 px-3 py-2 bg-navy-700 border border-border rounded-lg font-mono text-sm focus:outline-none focus:border-primary/50" />
             </div>
-            <button onClick={calculate} className="w-full flex items-center justify-center gap-2 py-2.5 bg-gold-500 text-primary-foreground font-semibold rounded-lg text-sm hover:opacity-90 transition-opacity">
+            <button onClick={calculate} className="w-full flex items-center justify-center gap-2 py-2.5 bg-gold-500 text-primary-foreground font-semibold rounded-lg text-sm hover:opacity-90 transition-opacity min-h-[44px]">
               <Calculator size={16} /> {t.loans.calculate}
             </button>
           </div>
@@ -117,7 +117,7 @@ export default function Loans() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-5">
                 <div className="zen-card zen-card-gold-top p-5">
                   <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">{t.loans.monthlyPayment}</p>
                   <p className="font-mono text-2xl font-semibold text-gold">{formatCurrency(result.monthlyPayment)}</p>
@@ -185,8 +185,8 @@ export default function Loans() {
                   </button>
                 </div>
                 {showSchedule && (
-                  <div className="max-h-[360px] overflow-auto">
-                    <table className="w-full text-sm">
+                  <div className="max-h-[360px] overflow-auto -mx-4 px-4 md:mx-0 md:px-0">
+                    <table className="w-full text-sm min-w-[500px]">
                       <thead className="sticky top-0 bg-navy-800">
                         <tr className="text-xs text-slate-500 uppercase tracking-wider border-b border-border">
                           <th className="text-left py-2 px-3">#</th>
