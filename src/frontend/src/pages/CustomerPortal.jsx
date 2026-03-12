@@ -302,7 +302,7 @@ const CSS = `
   .balance-label { font-size:11px; letter-spacing:2.5px; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
   .balance-amount { font-family:'Cormorant Garamond',serif; font-size:44px; font-weight:300; color:var(--white); line-height:1; margin-bottom:4px; }
   .balance-cents { font-size:24px; color:var(--gold); }
-  .account-scroll { display:flex; gap:12px; overflow-x:auto; margin-bottom:24px; padding-bottom:4px; scrollbar-width:none; }
+  .account-scroll { display:flex; gap:12px; overflow-x:auto; margin-bottom:24px; padding-bottom:4px; scrollbar-width:none; align-items:center; }
   .account-scroll::-webkit-scrollbar { display:none; }
   .account-pill { min-width:160px; background:var(--navy3); border:1px solid var(--border); border-radius:14px; padding:16px; cursor:pointer; transition:all .2s; flex-shrink:0; }
   .account-pill.active { border-color:var(--gold); background:rgba(201,168,76,0.06); }
@@ -1411,7 +1411,8 @@ function Dashboard({ t, user, accounts, transactions, onNav, onSelectAccount, se
         const activeAccts = sorted.filter(a => a.status === "A");
         const suspAccts = sorted.filter(a => a.status === "S" || (a.status !== "A" && a.status !== "C"));
         const closedAccts = sorted.filter(a => a.status === "C");
-        const labelStyle = { minWidth:"auto", flexShrink:0, display:"flex", alignItems:"center", padding:"0 4px", whiteSpace:"nowrap" };
+        const labelStyle = { display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minWidth:32, maxWidth:32, height:80, padding:0, background:"transparent", border:"none", cursor:"default", flexShrink:0 };
+        const labelTextBase = { writingMode:"vertical-rl", textOrientation:"mixed", transform:"rotate(180deg)", fontSize:9, letterSpacing:2, textTransform:"uppercase", whiteSpace:"nowrap" };
         const renderPill = (a, dimmed) => (
           <div key={a.id} data-acct={a.id} className={`account-pill ${selectedAccount?.id === a.id ? "active" : ""}`} style={dimmed ? { opacity:0.4 } : {}} onClick={() => { if (selectedAccount?.id === a.id) { onNav("account-detail"); } else { onSelectAccount(a); heroRef.current?.scrollIntoView({ behavior:"smooth", block:"nearest" }); } }}>
             <div className="pill-type">{a.type}</div>
@@ -1434,12 +1435,12 @@ function Dashboard({ t, user, accounts, transactions, onNav, onSelectAccount, se
             </div>
             {/* Active label */}
             {activeAccts.length > 0 && (
-              <div style={labelStyle}><span style={{ fontSize:9, letterSpacing:2.5, textTransform:"uppercase", color:"var(--gold)" }}>{t.activeAccounts} ({activeAccts.length})</span></div>
+              <div style={labelStyle}><span style={{ ...labelTextBase, color:"var(--gold)" }}>{t.activeAccounts} ({activeAccts.length})</span></div>
             )}
             {activeAccts.map(a => renderPill(a, false))}
             {/* Suspended label */}
             {suspAccts.length > 0 && (
-              <div style={labelStyle}><span style={{ fontSize:9, letterSpacing:2.5, textTransform:"uppercase", color:"var(--muted)" }}>{t.suspendedAccounts2} ({suspAccts.length})</span></div>
+              <div style={labelStyle}><span style={{ ...labelTextBase, color:"var(--muted)" }}>{t.suspendedAccounts2} ({suspAccts.length})</span></div>
             )}
             {suspAccts.map(a => renderPill(a, false))}
             {/* Closed — dimmed */}
