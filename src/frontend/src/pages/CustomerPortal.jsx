@@ -437,12 +437,12 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
       if (tab === "login") {
         const res = await api.login(form.email, form.password);
         setToken(res.token);
-        onLogin(res.user, res.token);
+        onLogin({ ...res.user, account_ids: res.account_ids || [] }, res.token);
       } else {
         if (!form.name) { setError(t.fieldRequired); setLoading(false); return; }
         const res = await api.register(form.email, form.name, form.password, lang);
         setToken(res.token);
-        onLogin(res.user, res.token);
+        onLogin({ ...res.user, account_ids: [] }, res.token);
       }
     } catch (e) {
       setError(e.message === "Email already registered" ? t.registerError : e.message || t.loginError);
@@ -1098,10 +1098,12 @@ function Dashboard({ t, user, accounts, transactions, onNav, onSelectAccount, se
 
   const clearSearch = () => { setSearchQuery(""); onSelectAccount(null); };
 
+  // Derive live selected account from accounts array (selectedAccount state is a stale snapshot)
+  const liveSelected = selectedAccount ? accounts.find(a => a.id === selectedAccount.id) || selectedAccount : null;
   const totalBalance = accounts.reduce((s,a) => s + (parseFloat(a.balance) || 0), 0);
   const recentTxns   = transactions.slice(0,4);
-  const overdrawnAccts = accounts.filter(a => a.balance < 0);
-  const lowBalAccts    = accounts.filter(a => a.balance >= 0 && a.balance < 200);
+  const overdrawnAccts = accounts.filter(a => (parseFloat(a.balance) || 0) < 0);
+  const lowBalAccts    = accounts.filter(a => { const b = parseFloat(a.balance) || 0; return b >= 0 && b < 200; });
 
   return (
     <div className="page">
@@ -1130,22 +1132,22 @@ function Dashboard({ t, user, accounts, transactions, onNav, onSelectAccount, se
       ))}
 
       <div className="balance-hero" ref={heroRef}>
-        {selectedAccount ? (
+        {liveSelected ? (
           <>
             <button onClick={() => onSelectAccount(null)} style={{ background:"none", border:"none", color:"var(--gold)", fontFamily:"DM Sans,sans-serif", fontSize:13, cursor:"pointer", padding:0, marginBottom:10, display:"flex", alignItems:"center", gap:4 }}>
               ← {t.viewAllAccounts}
             </button>
             <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
-              <span style={{ fontFamily:"monospace", fontSize:13, color:"var(--gold)" }}>{selectedAccount.id}</span>
-              <span style={{ fontSize:10, letterSpacing:2, textTransform:"uppercase", color:"var(--muted)" }}>{selectedAccount.type}</span>
+              <span style={{ fontFamily:"monospace", fontSize:13, color:"var(--gold)" }}>{liveSelected.id}</span>
+              <span style={{ fontSize:10, letterSpacing:2, textTransform:"uppercase", color:"var(--muted)" }}>{liveSelected.type}</span>
             </div>
-            <div className="balance-amount" style={{ color: (parseFloat(selectedAccount.balance)||0) < 0 ? "var(--red)" : "var(--white)" }}>
+            <div className="balance-amount" style={{ color: (parseFloat(liveSelected.balance)||0) < 0 ? "var(--red)" : "var(--white)" }}>
               <span style={{ fontSize:22, color:"var(--gold)", verticalAlign:"super", marginRight:4 }}>$</span>
-              {fmt(parseFloat(selectedAccount.balance)||0).split(".")[0]}
-              <span className="balance-cents">.{fmt(parseFloat(selectedAccount.balance)||0).split(".")[1]}</span>
+              {fmt(parseFloat(liveSelected.balance)||0).split(".")[0]}
+              <span className="balance-cents">.{fmt(parseFloat(liveSelected.balance)||0).split(".")[1]}</span>
             </div>
-            {(selectedAccount.overdraftLimit || 0) > 0 && (
-              <div style={{ fontSize:11, color:"var(--muted)", marginTop:6 }}>{t.overdraftLimitLabel}: ${fmt(selectedAccount.overdraftLimit)}</div>
+            {(liveSelected.overdraftLimit || 0) > 0 && (
+              <div style={{ fontSize:11, color:"var(--muted)", marginTop:6 }}>{t.overdraftLimitLabel}: ${fmt(liveSelected.overdraftLimit)}</div>
             )}
           </>
         ) : (
@@ -1289,28 +1291,21 @@ export default function ZentraPortal() {
   const handleUserUpdated = (u) => setUser(u);
 
   const handleTxnSuccess = useCallback((mode, fromId, toId, amount) => {
-    // Optimistic balance update
+    // Optimistic balance update — ACCOUNTS-MASTER.dat is only updated by
+    // nightly TXN-PROCESSOR batch, so re-fetching would overwrite correct
+    // optimistic values with stale pre-transaction balances.
     setAccounts(prev => prev.map(a => {
-      if (mode === "deposit" && a.id === fromId) return { ...a, balance: a.balance + amount };
-      if (mode === "withdraw" && a.id === fromId) return { ...a, balance: a.balance - amount };
-      if (mode === "transfer" && a.id === fromId) return { ...a, balance: a.balance - amount };
-      if (mode === "transfer" && a.id === toId) return { ...a, balance: a.balance + amount };
+      if (mode === "deposit" && a.id === fromId) return { ...a, balance: (parseFloat(a.balance) || 0) + amount };
+      if (mode === "withdraw" && a.id === fromId) return { ...a, balance: (parseFloat(a.balance) || 0) - amount };
+      if (mode === "transfer" && a.id === fromId) return { ...a, balance: (parseFloat(a.balance) || 0) - amount };
+      if (mode === "transfer" && a.id === toId) return { ...a, balance: (parseFloat(a.balance) || 0) + amount };
       return a;
     }));
-    // Mark affected accounts as pending
+    // Mark affected accounts as pending, clear after 3 seconds
     const pending = new Set([fromId]);
     if (mode === "transfer" && toId) pending.add(toId);
     setPendingAccounts(pending);
-    // Re-fetch real balances after 3 seconds (filtered by ownership)
-    setTimeout(async () => {
-      try {
-        const u = await api.getMe();
-        const data = await api.getAccounts();
-        const ownedIds = u.account_ids || [];
-        setAccounts((data.accounts || []).filter(a => ownedIds.includes(a.id)));
-      } catch {}
-      setPendingAccounts(new Set());
-    }, 3000);
+    setTimeout(() => setPendingAccounts(new Set()), 3000);
   }, []);
 
   if (!user) return (
