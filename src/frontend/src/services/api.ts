@@ -52,6 +52,15 @@ export const api = {
   runBatch: async () => {
     return fetch(`${BASE}/batch/run`, { method: 'POST' }).then(r => r.json());
   },
+
+  closeAccount: async (accountId: string) => {
+    const res = await fetch(`${BASE}/accounts/${accountId}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to close account' }));
+      throw new Error(err.detail || `Error ${res.status}`);
+    }
+    return res.json();
+  },
 };
 
 export const formatCurrency = (val: number) =>

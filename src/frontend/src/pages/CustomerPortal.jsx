@@ -82,6 +82,15 @@ const T = {
     none: "None",
     apy: "APY",
     noneOD: "None",
+    searchPlaceholder: "Search by account number",
+    searchClear: "Clear",
+    noAccountFound: "No account found",
+    accountDetail: "Account Details",
+    owner: "Owner",
+    openDate: "Opened",
+    lastActivity: "Last Activity",
+    noActivity: "No transactions yet",
+    pendingLabel: "pending",
   },
   fr: {
     appName: "ZENTRA",
@@ -163,6 +172,15 @@ const T = {
     none: "Aucun",
     apy: "TAE",
     noneOD: "Aucune",
+    searchPlaceholder: "Rechercher par numéro de compte",
+    searchClear: "Effacer",
+    noAccountFound: "Aucun compte trouvé",
+    accountDetail: "Détails du Compte",
+    owner: "Propriétaire",
+    openDate: "Ouvert le",
+    lastActivity: "Dernière Activité",
+    noActivity: "Aucune transaction",
+    pendingLabel: "en attente",
   },
 };
 
@@ -310,6 +328,19 @@ const CSS = `
   .acct-tag { background:var(--navy3); border:1px solid var(--border); border-radius:8px; padding:6px 12px; font-family:monospace; font-size:12px; color:var(--gold); display:flex; align-items:center; gap:8px; }
   .acct-tag button { background:none; border:none; color:var(--muted); cursor:pointer; font-size:14px; padding:0; }
   .acct-tag button:hover { color:var(--red); }
+  .search-bar { position:relative; margin-bottom:20px; }
+  .search-input { width:100%; background:var(--navy3); border:1px solid var(--border); border-radius:12px; padding:12px 16px; padding-right:44px; color:var(--white); font-family:'DM Sans',sans-serif; font-size:15px; outline:none; transition:border-color .2s, box-shadow .2s; }
+  .search-input:focus { border-color:var(--gold); box-shadow:0 0 0 2px rgba(201,168,76,0.15); }
+  .search-clear { position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--muted); font-size:18px; cursor:pointer; padding:4px; line-height:1; }
+  .search-clear:hover { color:var(--white); }
+  .no-match-msg { text-align:center; padding:14px; font-size:13px; color:var(--muted); }
+  .pending-badge { display:inline-block; margin-left:6px; font-size:10px; color:var(--gold); background:rgba(201,168,76,0.15); padding:1px 6px; border-radius:10px; vertical-align:middle; }
+  .detail-card { background:var(--navy3); border:1px solid var(--border); border-radius:14px; padding:18px; margin-bottom:16px; }
+  .detail-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05); font-size:14px; }
+  .detail-row:last-child { border-bottom:none; }
+  .detail-row span:first-child { color:var(--muted); }
+  .detail-balance { font-family:'Cormorant Garamond',serif; font-size:36px; font-weight:300; text-align:center; margin:16px 0; }
+  .detail-actions { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:16px; }
 `;
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
@@ -449,9 +480,9 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
 }
 
 // ─── TRANSACTION FLOW (shared confirm→success pattern) ───────────────────────
-function TxnFlow({ t, accounts, onBack, mode }) {
+function TxnFlow({ t, accounts, onBack, mode, onTxnSuccess, defaultAccountId }) {
   const [amount, setAmount] = useState("");
-  const [acctId, setAcctId] = useState(accounts[0]?.id || "");
+  const [acctId, setAcctId] = useState(defaultAccountId || accounts[0]?.id || "");
   const [toAcctId, setToAcctId] = useState(accounts[1]?.id || accounts[0]?.id || "");
   const [desc, setDesc] = useState(
     mode === "deposit" ? "PORTAL DEPOSIT" : mode === "withdraw" ? "PORTAL WITHDRAWAL" : "PORTAL TRANSFER"
@@ -479,6 +510,7 @@ function TxnFlow({ t, accounts, onBack, mode }) {
       if (mode === "transfer") res = await api.transfer(acctId, toAcctId, amount, desc);
       setRef(res.reference);
       setStep("success");
+      if (onTxnSuccess) onTxnSuccess(mode, acctId, toAcctId, parseFloat(amount));
     } catch (e) {
       setError(e.message);
       setStep("form");
@@ -640,6 +672,90 @@ function NewAccountPage({ t, user, onBack, onCreated }) {
       <button className="btn-primary" onClick={create} disabled={loading}>
         {loading ? <><span className="spinner" /></> : `${t.openBtn} ${selected?.label}`}
       </button>
+    </div>
+  );
+}
+
+// ─── ACCOUNT DETAIL ──────────────────────────────────────────────────────────
+function AccountDetailPage({ t, account, onBack, onNav, onSelectAccount }) {
+  const [txns, setTxns] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!account) return;
+    setLoading(true);
+    api.getTransactions(account.id)
+      .then(data => setTxns((data.transactions || []).sort((a, b) => (b.date || "").localeCompare(a.date || ""))))
+      .catch(() => setTxns([]))
+      .finally(() => setLoading(false));
+  }, [account?.id]);
+
+  if (!account) return (
+    <div className="page">
+      <button className="back-btn" onClick={onBack}>← {t.back}</button>
+      <p style={{ color: "var(--muted)" }}>{t.accountNotFound}</p>
+    </div>
+  );
+
+  const goTxn = (mode) => {
+    if (onSelectAccount) onSelectAccount(account);
+    onNav(mode);
+  };
+
+  return (
+    <div className="page">
+      <button className="back-btn" onClick={onBack}>← {t.back}</button>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+        <div style={{ fontFamily: "monospace", fontSize: 18, color: "var(--gold)" }}>{account.id}</div>
+        <span className={`pill-status ${account.status === "A" ? "active-s" : "suspended-s"}`}>
+          {account.status === "A" ? t.active : t.suspended}
+        </span>
+      </div>
+      <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 20, textTransform: "uppercase", letterSpacing: 2 }}>{account.type}</div>
+
+      <div className="detail-card">
+        <div className="detail-balance" style={{ color: account.balance < 0 ? "var(--red)" : "var(--white)" }}>
+          <span style={{ fontSize: 20, color: "var(--gold)", verticalAlign: "super", marginRight: 4 }}>$</span>
+          {fmtFull(account.balance)}
+        </div>
+        <div className="detail-row"><span>{t.owner}</span><span>{account.name}</span></div>
+        <div className="detail-row"><span>{t.accounts}</span><span>{account.type}</span></div>
+        <div className="detail-row"><span>{t.overdraftLimit}</span><span>${fmt(account.overdraftLimit || 0)}</span></div>
+      </div>
+
+      <div className="detail-actions">
+        <button className="btn-sm" onClick={() => goTxn("deposit")}>↓ {t.deposit}</button>
+        <button className="btn-sm" onClick={() => goTxn("withdraw")}>↑ {t.withdraw}</button>
+        <button className="btn-sm" onClick={() => goTxn("transfer")}>⇄ {t.transfer}</button>
+      </div>
+
+      <div style={{ marginTop: 24 }}>
+        <p className="section-title">{t.transactionHistory || t.recentTxns}</p>
+        {loading ? (
+          <div style={{ textAlign: "center", padding: 40 }}><span className="spinner" /></div>
+        ) : txns.length === 0 ? (
+          <div style={{ textAlign: "center", padding: 40, color: "var(--muted)" }}>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>📋</div>
+            <div>{t.noActivity}</div>
+          </div>
+        ) : (
+          <div className="txn-list">
+            {txns.map((txn, i) => (
+              <div key={i} className="txn-item">
+                <div className={`txn-icon ${txnClass(txn.type)}`}>{txnIcon(txn.type)}</div>
+                <div className="txn-details">
+                  <div className="txn-desc">{txn.description || txn.desc}</div>
+                  <div className="txn-meta">{txn.date} · <span className={`tag tag-${txn.status === "APR" ? "approved" : txn.status === "PND" ? "pending" : "rejected"}`}>{txn.status}</span></div>
+                </div>
+                <div className={`txn-amount ${isCredit(txn.type) ? "credit" : "debit"}`}>
+                  {isCredit(txn.type) ? "+" : "-"}${fmt(txn.amount)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -939,7 +1055,31 @@ function ProfilePage({ t, user, accounts, onLogout, onNav, onUpdated, lang, setL
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
-function Dashboard({ t, user, accounts, transactions, onNav, onSelectAccount, selectedAccount }) {
+function Dashboard({ t, user, accounts, transactions, onNav, onSelectAccount, selectedAccount, pendingAccounts }) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const scrollRef = useRef(null);
+
+  const filteredAccounts = searchQuery
+    ? accounts.filter(a => a.id.toUpperCase().includes(("ZNT-" + searchQuery).toUpperCase()))
+    : accounts;
+
+  // Auto-highlight single match and scroll into view
+  useEffect(() => {
+    if (filteredAccounts.length === 1 && searchQuery) {
+      onSelectAccount(filteredAccounts[0]);
+      const el = document.querySelector(`[data-acct="${filteredAccounts[0].id}"]`);
+      if (el) el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    }
+  }, [filteredAccounts.length, searchQuery]);
+
+  const handleSearchInput = (e) => {
+    let val = e.target.value;
+    if (!val.startsWith("ZNT-")) val = "ZNT-";
+    setSearchQuery(val.slice(4));
+  };
+
+  const clearSearch = () => { setSearchQuery(""); onSelectAccount(null); };
+
   const totalBalance = accounts.reduce((s,a) => s+a.balance, 0);
   const recentTxns   = transactions.slice(0,4);
   const overdrawnAccts = accounts.filter(a => a.balance < 0);
@@ -985,23 +1125,43 @@ function Dashboard({ t, user, accounts, transactions, onNav, onSelectAccount, se
         <span>{t.batchNote}</span>
       </div>
 
+      <div className="search-bar">
+        <input
+          className="search-input"
+          type="text"
+          value={"ZNT-" + searchQuery}
+          onChange={handleSearchInput}
+          placeholder={t.searchPlaceholder}
+        />
+        {searchQuery && (
+          <button className="search-clear" onClick={clearSearch} title={t.searchClear}>×</button>
+        )}
+      </div>
+
       <p className="section-title">{t.accounts}</p>
-      <div className="account-scroll">
-        {accounts.map(a => (
-          <div key={a.id} className={`account-pill ${selectedAccount?.id === a.id ? "active" : ""}`} onClick={() => onSelectAccount(a)}>
-            <div className="pill-type">{a.type}</div>
-            <div className="pill-id">{a.id}</div>
-            <div className="pill-balance" style={{ color: a.balance<0?"var(--red)":"var(--white)" }}>{fmtFull(a.balance)}</div>
-            <span className={`pill-status ${a.status==="A"?"active-s":"suspended-s"}`}>{a.status==="A"?t.active:t.suspended}</span>
-          </div>
-        ))}
-        <div className="account-pill" style={{ borderStyle:"dashed", display:"flex", alignItems:"center", justifyContent:"center" }} onClick={() => onNav("new-account")}>
-          <div style={{ textAlign:"center" }}>
-            <div style={{ fontSize:24, marginBottom:6 }}>+</div>
-            <div style={{ fontSize:11, color:"var(--muted)" }}>{t.newAccount}</div>
+      {filteredAccounts.length === 0 && searchQuery ? (
+        <div className="no-match-msg">{t.noAccountFound}</div>
+      ) : (
+        <div className="account-scroll" ref={scrollRef}>
+          {filteredAccounts.map(a => (
+            <div key={a.id} data-acct={a.id} className={`account-pill ${selectedAccount?.id === a.id ? "active" : ""}`} onClick={() => { onSelectAccount(a); onNav("account-detail"); }}>
+              <div className="pill-type">{a.type}</div>
+              <div className="pill-id">{a.id}</div>
+              <div className="pill-balance" style={{ color: a.balance<0?"var(--red)":"var(--white)" }}>
+                {fmtFull(a.balance)}
+                {pendingAccounts?.has(a.id) && <span className="pending-badge">({t.pendingLabel})</span>}
+              </div>
+              <span className={`pill-status ${a.status==="A"?"active-s":"suspended-s"}`}>{a.status==="A"?t.active:t.suspended}</span>
+            </div>
+          ))}
+          <div className="account-pill" style={{ borderStyle:"dashed", display:"flex", alignItems:"center", justifyContent:"center" }} onClick={() => onNav("new-account")}>
+            <div style={{ textAlign:"center" }}>
+              <div style={{ fontSize:24, marginBottom:6 }}>+</div>
+              <div style={{ fontSize:11, color:"var(--muted)" }}>{t.newAccount}</div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <p className="section-title">{t.quickActions}</p>
       <div className="quick-actions">
@@ -1041,6 +1201,7 @@ export default function ZentraPortal() {
   const [accounts, setAccounts]           = useState([]);
   const [transactions, setTransactions]   = useState([]);
   const [selectedAccount, setSelectedAccount] = useState(null);
+  const [pendingAccounts, setPendingAccounts] = useState(new Set());
   const [dataLoading, setDataLoading]     = useState(false);
   const t = T[lang];
 
@@ -1070,6 +1231,29 @@ export default function ZentraPortal() {
   const handleAccountCreated = (a) => setAccounts(prev => [...prev, a]);
   const handleUserUpdated = (u) => setUser(u);
 
+  const handleTxnSuccess = useCallback((mode, fromId, toId, amount) => {
+    // Optimistic balance update
+    setAccounts(prev => prev.map(a => {
+      if (mode === "deposit" && a.id === fromId) return { ...a, balance: a.balance + amount };
+      if (mode === "withdraw" && a.id === fromId) return { ...a, balance: a.balance - amount };
+      if (mode === "transfer" && a.id === fromId) return { ...a, balance: a.balance - amount };
+      if (mode === "transfer" && a.id === toId) return { ...a, balance: a.balance + amount };
+      return a;
+    }));
+    // Mark affected accounts as pending
+    const pending = new Set([fromId]);
+    if (mode === "transfer" && toId) pending.add(toId);
+    setPendingAccounts(pending);
+    // Re-fetch real balances after 3 seconds
+    setTimeout(async () => {
+      try {
+        const data = await api.getAccounts();
+        setAccounts(data.accounts || []);
+      } catch {}
+      setPendingAccounts(new Set());
+    }, 3000);
+  }, []);
+
   if (!user) return (
     <>
       <style>{CSS}</style>
@@ -1090,12 +1274,13 @@ export default function ZentraPortal() {
 
   const renderScreen = () => {
     switch (screen) {
-      case "dashboard":  return <Dashboard t={t} user={user} accounts={accounts} transactions={transactions} onNav={navTo} onSelectAccount={setSelectedAccount} selectedAccount={selectedAccount} />;
-      case "deposit":    return <TxnFlow t={t} accounts={accounts} onBack={() => navTo("dashboard")} mode="deposit" />;
-      case "withdraw":   return <TxnFlow t={t} accounts={accounts} onBack={() => navTo("dashboard")} mode="withdraw" />;
-      case "transfer":   return <TxnFlow t={t} accounts={accounts} onBack={() => navTo("dashboard")} mode="transfer" />;
+      case "dashboard":  return <Dashboard t={t} user={user} accounts={accounts} transactions={transactions} onNav={navTo} onSelectAccount={setSelectedAccount} selectedAccount={selectedAccount} pendingAccounts={pendingAccounts} />;
+      case "deposit":    return <TxnFlow t={t} accounts={accounts} onBack={() => navTo("dashboard")} mode="deposit" onTxnSuccess={handleTxnSuccess} defaultAccountId={selectedAccount?.id} />;
+      case "withdraw":   return <TxnFlow t={t} accounts={accounts} onBack={() => navTo("dashboard")} mode="withdraw" onTxnSuccess={handleTxnSuccess} defaultAccountId={selectedAccount?.id} />;
+      case "transfer":   return <TxnFlow t={t} accounts={accounts} onBack={() => navTo("dashboard")} mode="transfer" onTxnSuccess={handleTxnSuccess} defaultAccountId={selectedAccount?.id} />;
       case "history":    return <HistoryPage t={t} accounts={accounts} onBack={() => navTo("dashboard")} />;
       case "new-account": return <NewAccountPage t={t} user={user} onBack={() => navTo("dashboard")} onCreated={handleAccountCreated} />;
+      case "account-detail": return <AccountDetailPage t={t} account={selectedAccount} onBack={() => navTo("dashboard")} onNav={navTo} onSelectAccount={setSelectedAccount} />;
       case "profile":    return <ProfilePage t={t} user={user} accounts={accounts} onLogout={handleLogout} onNav={navTo} onUpdated={handleUserUpdated} lang={lang} setLang={setLang} />;
       default: return null;
     }
