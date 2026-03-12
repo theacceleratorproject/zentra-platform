@@ -4,6 +4,7 @@ import {
 } from 'recharts';
 import { Users, ArrowRight, Calculator, ArrowLeftRight, Zap, TrendingUp, Activity } from 'lucide-react';
 import { formatCurrency } from '@/services/api';
+import { useT } from '@/i18n';
 
 const balanceData = [
   { day: 'Mon', value: 1180000 },
@@ -29,13 +30,6 @@ const accounts = [
   { id: 'ZNT-004', name: 'David Chen', type: 'CHECKING', balance: -450.25, status: 'Active' },
 ];
 
-const quickActions = [
-  { label: 'View Accounts', icon: Users, to: '/accounts' },
-  { label: 'Loan Calculator', icon: Calculator, to: '/loans' },
-  { label: 'Validate Transactions', icon: ArrowLeftRight, to: '/transactions' },
-  { label: 'Run Daily Batch', icon: Zap, to: '/batch' },
-];
-
 const chartTooltipStyle = {
   contentStyle: {
     background: '#0d1535',
@@ -51,22 +45,31 @@ const now = new Date();
 const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: '2-digit' }).toUpperCase();
 
 export default function Dashboard() {
+  const t = useT();
+
+  const quickActions = [
+    { label: t.nav.accounts, icon: Users, to: '/accounts' },
+    { label: t.nav.loans, icon: Calculator, to: '/loans' },
+    { label: t.nav.transactions, icon: ArrowLeftRight, to: '/transactions' },
+    { label: t.nav.batch, icon: Zap, to: '/batch' },
+  ];
+
   return (
     <div className="space-y-8">
       {/* Header */}
       <div>
         <p className="font-mono text-xs text-slate-500 tracking-widest mb-2">{dateStr}</p>
-        <h1 className="font-display text-3xl font-bold text-foreground">Good morning, Marck</h1>
-        <p className="text-slate-300 text-sm mt-1">Zentra Core Engine is running normally · <span className="font-mono text-gold">GnuCOBOL 3.2</span></p>
+        <h1 className="font-display text-3xl font-bold text-foreground">{t.dashboard.title}</h1>
+        <p className="text-slate-300 text-sm mt-1">{t.dashboard.subtitle} · <span className="font-mono text-gold">GnuCOBOL 3.2</span></p>
       </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-4 gap-5">
         {[
-          { label: 'Total System Balance', value: formatCurrency(1421000), sub: 'Across 6 accounts', accent: 'zen-card-gold-top' },
-          { label: 'Active Accounts', value: '5', sub: 'Accounts in good standing', accent: 'zen-card-blue-top' },
-          { label: 'Daily Transactions', value: '24', sub: '9 approved · 3 rejected', accent: 'zen-card-green-top' },
-          { label: 'COBOL Engine', value: 'Online', sub: 'GnuCOBOL 3.2', accent: 'zen-card-gold-top' },
+          { label: t.dashboard.totalBalance, value: formatCurrency(1421000), sub: `6 ${t.nav.accounts.toLowerCase()}`, accent: 'zen-card-gold-top' },
+          { label: t.dashboard.totalAccounts, value: '5', sub: t.common.active, accent: 'zen-card-blue-top' },
+          { label: t.dashboard.todayTxns, value: '24', sub: `9 ${t.transactions.approved.toLowerCase()} · 3 ${t.transactions.rejectedStatus.toLowerCase()}`, accent: 'zen-card-green-top' },
+          { label: t.dashboard.cobolEngine, value: t.dashboard.available, sub: 'GnuCOBOL 3.2', accent: 'zen-card-gold-top' },
         ].map((s) => (
           <div key={s.label} className={`zen-card ${s.accent} p-5`}>
             <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">{s.label}</p>
@@ -82,10 +85,10 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2">
               <TrendingUp size={16} className="text-gold" />
-              <h3 className="font-display text-lg font-semibold">System Balance — 7 Day Trend</h3>
+              <h3 className="font-display text-lg font-semibold">{t.dashboard.balanceOverview}</h3>
             </div>
           </div>
-          <p className="text-xs text-zen-green font-mono mb-4">+3.2% this week</p>
+          <p className="text-xs text-zen-green font-mono mb-4">+3.2%</p>
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={balanceData}>
               <defs>
@@ -97,7 +100,7 @@ export default function Dashboard() {
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
               <XAxis dataKey="day" tick={{ fill: '#5a6490', fontSize: 11, fontFamily: '"DM Mono"' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: '#5a6490', fontSize: 11, fontFamily: '"DM Mono"' }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v / 1e6).toFixed(1)}M`} />
-              <Tooltip {...chartTooltipStyle} formatter={(v: number) => [formatCurrency(v), 'Balance']} />
+              <Tooltip {...chartTooltipStyle} formatter={(v: number) => [formatCurrency(v), t.common.balance]} />
               <Area type="monotone" dataKey="value" stroke="#d4af37" fill="url(#goldGrad)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
@@ -106,9 +109,9 @@ export default function Dashboard() {
         <div className="zen-card p-5">
           <div className="flex items-center gap-2 mb-1">
             <Activity size={16} className="text-zen-blue" />
-            <h3 className="font-display text-lg font-semibold">Transaction Volume — Today</h3>
+            <h3 className="font-display text-lg font-semibold">{t.dashboard.todayTxns}</h3>
           </div>
-          <p className="text-xs text-zen-blue font-mono mb-4">Peak at 14:00 — 17 transactions</p>
+          <p className="text-xs text-zen-blue font-mono mb-4">Peak 14:00 — 17 txns</p>
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={txnVolume}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
@@ -124,18 +127,18 @@ export default function Dashboard() {
       {/* Account snapshot */}
       <div className="zen-card p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-display text-lg font-semibold">Account Snapshot</h3>
-          <Link to="/accounts" className="text-xs text-gold flex items-center gap-1 hover:underline">View all <ArrowRight size={12} /></Link>
+          <h3 className="font-display text-lg font-semibold">{t.nav.accounts}</h3>
+          <Link to="/accounts" className="text-xs text-gold flex items-center gap-1 hover:underline">{t.common.view} <ArrowRight size={12} /></Link>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-xs text-slate-500 uppercase tracking-wider border-b border-border">
-                <th className="text-left py-2 px-3">Account ID</th>
-                <th className="text-left py-2 px-3">Name</th>
-                <th className="text-left py-2 px-3">Type</th>
-                <th className="text-right py-2 px-3">Balance</th>
-                <th className="text-left py-2 px-3">Status</th>
+                <th className="text-left py-2 px-3">{t.accounts.accountId}</th>
+                <th className="text-left py-2 px-3">{t.common.name}</th>
+                <th className="text-left py-2 px-3">{t.common.type}</th>
+                <th className="text-right py-2 px-3">{t.common.balance}</th>
+                <th className="text-left py-2 px-3">{t.common.status}</th>
               </tr>
             </thead>
             <tbody>
@@ -148,7 +151,7 @@ export default function Dashboard() {
                     {formatCurrency(a.balance)}
                     {a.balance < 0 && <span className="badge-red ml-2">OD</span>}
                   </td>
-                  <td className="py-2.5 px-3"><span className="badge-green">{a.status}</span></td>
+                  <td className="py-2.5 px-3"><span className="badge-green">{t.common.active}</span></td>
                 </tr>
               ))}
             </tbody>

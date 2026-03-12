@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { api, formatCurrency } from '@/services/api';
+import { useT } from '@/i18n';
 
 export default function Accounts() {
+  const t = useT();
   const [accounts, setAccounts] = useState([
     { id: 'ZNT-001', name: 'Alice Johnson', type: 'CHECKING', balance: 14250.75, status: 'Active' },
     { id: 'ZNT-002', name: 'Bob Martinez', type: 'SAVINGS', balance: 87500.00, status: 'Active' },
@@ -27,26 +29,26 @@ export default function Accounts() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="font-display text-3xl font-bold">Accounts</h1>
+        <h1 className="font-display text-3xl font-bold">{t.accounts.title}</h1>
         <button onClick={handleRefresh} className="flex items-center gap-2 px-4 py-2 bg-gold-500 text-primary-foreground font-semibold rounded-lg text-sm hover:opacity-90 transition-opacity">
           {loading ? <span className="gold-spinner" /> : <RefreshCw size={16} />}
-          Refresh
+          {t.common.refresh}
         </button>
       </div>
 
       <div className="grid grid-cols-3 gap-5">
         <div className="zen-card zen-card-gold-top p-5">
-          <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Total Accounts</p>
+          <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">{t.accounts.totalAccounts}</p>
           <p className="font-mono text-2xl font-semibold">{accounts.length}</p>
         </div>
         <div className="zen-card zen-card-green-top p-5">
-          <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Active</p>
+          <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">{t.common.active}</p>
           <p className="font-mono text-2xl font-semibold text-zen-green">{activeCount}</p>
         </div>
         <div className="zen-card zen-card-red-top p-5">
-          <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Overdrafts</p>
+          <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">{t.accounts.overdrafted}</p>
           <p className="font-mono text-2xl font-semibold text-zen-red">{odCount}</p>
-          {odCount > 0 && <p className="text-xs text-zen-red mt-1">Action required</p>}
+          {odCount > 0 && <p className="text-xs text-zen-red mt-1">{t.dashboard.overdraftAlert}</p>}
         </div>
       </div>
 
@@ -54,11 +56,11 @@ export default function Accounts() {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-xs text-slate-500 uppercase tracking-wider border-b border-border">
-              <th className="text-left py-2 px-3">Account ID</th>
-              <th className="text-left py-2 px-3">Name</th>
-              <th className="text-left py-2 px-3">Type</th>
-              <th className="text-right py-2 px-3">Balance</th>
-              <th className="text-left py-2 px-3">Status</th>
+              <th className="text-left py-2 px-3">{t.accounts.accountId}</th>
+              <th className="text-left py-2 px-3">{t.common.name}</th>
+              <th className="text-left py-2 px-3">{t.common.type}</th>
+              <th className="text-right py-2 px-3">{t.common.balance}</th>
+              <th className="text-left py-2 px-3">{t.common.status}</th>
             </tr>
           </thead>
           <tbody>
@@ -71,14 +73,14 @@ export default function Accounts() {
                   {formatCurrency(a.balance)}
                   {a.balance < 0 && <span className="badge-red ml-2">OD</span>}
                 </td>
-                <td className="py-2.5 px-3"><span className="badge-green">{a.status}</span></td>
+                <td className="py-2.5 px-3"><span className="badge-green">{t.common.active}</span></td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr>
               <td colSpan={5} className="text-right py-3 px-3 font-mono text-zen-green font-semibold">
-                Net System Balance: {formatCurrency(totalBalance)}
+                {t.accounts.totalBalance}: {formatCurrency(totalBalance)}
               </td>
             </tr>
           </tfoot>

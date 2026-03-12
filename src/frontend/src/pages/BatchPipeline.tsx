@@ -1,24 +1,27 @@
 import { useState, useCallback } from 'react';
 import { Zap, Check, X, Loader2 } from 'lucide-react';
+import { useT } from '@/i18n';
 
 interface Step {
-  title: string;
+  titleKey: string;
   program: string;
-  description: string;
+  descKey: string;
   stdout: string;
   status: 'pending' | 'running' | 'passed' | 'failed';
 }
 
-const initialSteps: Step[] = [
-  { title: 'Fee Engine', program: 'FEE-ENGINE.cbl', description: 'Generate fee transactions', stdout: 'Fees Generated: 4 | Maintenance: 2 | Low-Bal: 1 | OD: 1 | Total: $75.00', status: 'pending' },
-  { title: 'Transaction Validator', program: 'TXN-VALIDATOR.cbl', description: 'Apply 6 business rules (E01–E06)', stdout: 'Read: 12 | Approved: 9 | Rejected: 3', status: 'pending' },
-  { title: 'Transaction Processor', program: 'TXN-PROCESSOR.cbl', description: 'Apply approved transactions', stdout: 'Applied: 9 | Deposited: $15,000.00 | Withdrawn: $2,310.00', status: 'pending' },
-  { title: 'Interest Calculator', program: 'INTEREST-CALC.cbl', description: 'Compute daily interest', stdout: 'Accounts Credited: 5 | Total Interest: $127.43', status: 'pending' },
-  { title: 'End-of-Day Report', program: 'EOD-REPORT.cbl', description: 'Generate management report', stdout: 'Report Generated: 47 lines | File: EOD-REPORT.dat', status: 'pending' },
-];
-
 export default function BatchPipeline() {
-  const [steps, setSteps] = useState<Step[]>(initialSteps);
+  const t = useT();
+
+  const makeSteps = (): Step[] => [
+    { titleKey: 'feeEngine', program: 'FEE-ENGINE.cbl', descKey: 'feeEngine', stdout: 'Fees Generated: 4 | Maintenance: 2 | Low-Bal: 1 | OD: 1 | Total: $75.00', status: 'pending' },
+    { titleKey: 'validator', program: 'TXN-VALIDATOR.cbl', descKey: 'validator', stdout: 'Read: 12 | Approved: 9 | Rejected: 3', status: 'pending' },
+    { titleKey: 'processor', program: 'TXN-PROCESSOR.cbl', descKey: 'processor', stdout: 'Applied: 9 | Deposited: $15,000.00 | Withdrawn: $2,310.00', status: 'pending' },
+    { titleKey: 'interest', program: 'INTEREST-CALC.cbl', descKey: 'interest', stdout: 'Accounts Credited: 5 | Total Interest: $127.43', status: 'pending' },
+    { titleKey: 'eodReport', program: 'EOD-REPORT.cbl', descKey: 'eodReport', stdout: 'Report Generated: 47 lines | File: EOD-REPORT.dat', status: 'pending' },
+  ];
+
+  const [steps, setSteps] = useState<Step[]>(makeSteps());
   const [running, setRunning] = useState(false);
   const [done, setDone] = useState(false);
   const [duration, setDuration] = useState('');
@@ -26,14 +29,13 @@ export default function BatchPipeline() {
   const runBatch = useCallback(async () => {
     setRunning(true);
     setDone(false);
-    setSteps(initialSteps);
+    const freshSteps = makeSteps();
+    setSteps(freshSteps);
     const start = Date.now();
 
-    for (let i = 0; i < initialSteps.length; i++) {
-      // Set current to running
+    for (let i = 0; i < freshSteps.length; i++) {
       setSteps(prev => prev.map((s, j) => j === i ? { ...s, status: 'running' } : s));
       await new Promise(r => setTimeout(r, 600));
-      // Set current to passed
       setSteps(prev => prev.map((s, j) => j === i ? { ...s, status: 'passed' } : s));
     }
 
@@ -48,13 +50,13 @@ export default function BatchPipeline() {
 
   return (
     <div className="space-y-8">
-      <h1 className="font-display text-3xl font-bold">Batch Pipeline</h1>
+      <h1 className="font-display text-3xl font-bold">{t.batch.title}</h1>
 
       {/* Hero control */}
       <div className="zen-card p-8 border border-primary/20 bg-gradient-to-br from-navy-800 to-navy-700 text-center">
-        <h2 className="font-display text-2xl font-bold mb-2">Daily Batch Cycle</h2>
+        <h2 className="font-display text-2xl font-bold mb-2">{t.batch.subtitle}</h2>
         <p className="text-sm text-slate-300 mb-6 max-w-lg mx-auto">
-          Orchestrates FEE-ENGINE → TXN-VALIDATOR → TXN-PROCESSOR → INTEREST-CALC → EOD-REPORT
+          {t.batch.steps.feeEngine} → {t.batch.steps.validator} → {t.batch.steps.processor} → {t.batch.steps.interest} → {t.batch.steps.eodReport}
         </p>
         <button
           onClick={runBatch}
@@ -62,14 +64,14 @@ export default function BatchPipeline() {
           className="inline-flex items-center gap-2 px-8 py-3 bg-gold-500 text-primary-foreground font-bold rounded-lg text-base hover:opacity-90 transition-opacity disabled:opacity-50"
         >
           {running ? <Loader2 size={20} className="animate-spin" /> : <Zap size={20} />}
-          {running ? 'Running...' : 'Run Full Batch'}
+          {running ? t.batch.running : t.batch.runBatch}
         </button>
 
         {done && (
           <div className="flex items-center justify-center gap-8 mt-6">
-            <div><span className="badge-green">✓ All Passed</span></div>
-            <div className="text-sm"><span className="text-slate-500">Steps:</span> <span className="font-mono text-foreground">{passedCount}/5</span></div>
-            <div className="text-sm"><span className="text-slate-500">Duration:</span> <span className="font-mono text-gold">{duration}</span></div>
+            <div><span className="badge-green">{t.batch.completed}</span></div>
+            <div className="text-sm"><span className="text-slate-500">{t.batch.step}:</span> <span className="font-mono text-foreground">{passedCount}/5</span></div>
+            <div className="text-sm"><span className="text-slate-500">{t.batch.duration}:</span> <span className="font-mono text-gold">{duration}</span></div>
           </div>
         )}
       </div>
@@ -96,8 +98,8 @@ export default function BatchPipeline() {
 
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="font-semibold">Step {i + 1} — {step.title}</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">{step.description}</p>
+                  <h3 className="font-semibold">{t.batch.step} {i + 1} — {t.batch.steps[step.titleKey as keyof typeof t.batch.steps]}</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">{t.batch.stepDesc[step.descKey as keyof typeof t.batch.stepDesc]}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="font-mono text-xs text-gold">{step.program}</span>
@@ -106,7 +108,9 @@ export default function BatchPipeline() {
                     step.status === 'running' ? 'badge-gold' :
                     step.status === 'passed' ? 'badge-green' : 'badge-red'
                   }`}>
-                    {step.status}
+                    {step.status === 'pending' ? t.batch.idle :
+                     step.status === 'running' ? t.batch.running :
+                     step.status === 'passed' ? t.batch.completed : t.batch.failed}
                   </span>
                 </div>
               </div>

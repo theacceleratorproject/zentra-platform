@@ -2,13 +2,7 @@ import { useState } from 'react';
 import { Calculator, ChevronDown, ChevronUp } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatCurrency } from '@/services/api';
-
-const presets = [
-  { label: '30yr Mortgage', principal: 350000, rate: 6.875, years: 30 },
-  { label: '15yr Mortgage', principal: 300000, rate: 6.0, years: 15 },
-  { label: '5yr Auto Loan', principal: 45000, rate: 5.9, years: 5 },
-  { label: 'Personal Loan', principal: 15000, rate: 11.5, years: 3 },
-];
+import { useT } from '@/i18n';
 
 interface AmortRow {
   number: number;
@@ -19,6 +13,15 @@ interface AmortRow {
 }
 
 export default function Loans() {
+  const t = useT();
+
+  const presets = [
+    { label: t.loans.mortgage + ' 30yr', principal: 350000, rate: 6.875, years: 30 },
+    { label: t.loans.mortgage + ' 15yr', principal: 300000, rate: 6.0, years: 15 },
+    { label: t.loans.autoLoan, principal: 45000, rate: 5.9, years: 5 },
+    { label: t.loans.personalLoan, principal: 15000, rate: 11.5, years: 3 },
+  ];
+
   const [principal, setPrincipal] = useState<number>(0);
   const [rate, setRate] = useState<number>(0);
   const [years, setYears] = useState<number>(0);
@@ -66,13 +69,13 @@ export default function Loans() {
 
   return (
     <div className="space-y-8">
-      <h1 className="font-display text-3xl font-bold">Loan Calculator</h1>
+      <h1 className="font-display text-3xl font-bold">{t.loans.title}</h1>
 
       <div className="flex gap-6">
         {/* Left panel */}
         <div className="w-[340px] shrink-0 space-y-5">
           <div className="zen-card p-5">
-            <h3 className="text-sm font-semibold text-slate-300 mb-3 uppercase tracking-wider">Presets</h3>
+            <h3 className="text-sm font-semibold text-slate-300 mb-3 uppercase tracking-wider">{t.loans.presets}</h3>
             <div className="space-y-2">
               {presets.map(p => (
                 <button key={p.label} onClick={() => applyPreset(p)} className="w-full text-left px-3 py-2.5 rounded-lg border border-border hover:border-primary/30 transition-colors text-sm">
@@ -87,19 +90,19 @@ export default function Loans() {
 
           <div className="zen-card p-5 space-y-4">
             <div>
-              <label className="text-xs text-slate-500 uppercase tracking-wider">Principal ($)</label>
+              <label className="text-xs text-slate-500 uppercase tracking-wider">{t.loans.principal} ($)</label>
               <input type="number" value={principal || ''} onChange={e => setPrincipal(Number(e.target.value))} className="w-full mt-1 px-3 py-2 bg-navy-700 border border-border rounded-lg font-mono text-sm focus:outline-none focus:border-primary/50" />
             </div>
             <div>
-              <label className="text-xs text-slate-500 uppercase tracking-wider">Annual Rate (%)</label>
+              <label className="text-xs text-slate-500 uppercase tracking-wider">{t.loans.interestRate} (%)</label>
               <input type="number" step={0.125} value={rate || ''} onChange={e => setRate(Number(e.target.value))} className="w-full mt-1 px-3 py-2 bg-navy-700 border border-border rounded-lg font-mono text-sm focus:outline-none focus:border-primary/50" />
             </div>
             <div>
-              <label className="text-xs text-slate-500 uppercase tracking-wider">Term (Years)</label>
+              <label className="text-xs text-slate-500 uppercase tracking-wider">{t.loans.termYears}</label>
               <input type="number" min={1} max={30} value={years || ''} onChange={e => setYears(Number(e.target.value))} className="w-full mt-1 px-3 py-2 bg-navy-700 border border-border rounded-lg font-mono text-sm focus:outline-none focus:border-primary/50" />
             </div>
             <button onClick={calculate} className="w-full flex items-center justify-center gap-2 py-2.5 bg-gold-500 text-primary-foreground font-semibold rounded-lg text-sm hover:opacity-90 transition-opacity">
-              <Calculator size={16} /> Calculate
+              <Calculator size={16} /> {t.loans.calculate}
             </button>
           </div>
         </div>
@@ -109,29 +112,29 @@ export default function Loans() {
           {!result ? (
             <div className="zen-card p-12 flex flex-col items-center justify-center text-center">
               <Calculator size={40} className="text-slate-500 mb-3" />
-              <p className="text-slate-300 font-medium">Select a preset or enter values</p>
-              <p className="text-xs text-slate-500 mt-1">Results will appear here after calculation</p>
+              <p className="text-slate-300 font-medium">{t.loans.presets}</p>
+              <p className="text-xs text-slate-500 mt-1">{t.loans.subtitle}</p>
             </div>
           ) : (
             <>
               <div className="grid grid-cols-3 gap-5">
                 <div className="zen-card zen-card-gold-top p-5">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Monthly Payment</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">{t.loans.monthlyPayment}</p>
                   <p className="font-mono text-2xl font-semibold text-gold">{formatCurrency(result.monthlyPayment)}</p>
                 </div>
                 <div className="zen-card zen-card-red-top p-5">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Total Interest</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">{t.loans.totalInterest}</p>
                   <p className="font-mono text-2xl font-semibold text-zen-red">{formatCurrency(result.totalInterest)}</p>
                 </div>
                 <div className="zen-card zen-card-blue-top p-5">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Total Cost</p>
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">{t.loans.totalPayment}</p>
                   <p className="font-mono text-2xl font-semibold text-zen-blue">{formatCurrency(result.totalCost)}</p>
                 </div>
               </div>
 
               {/* Ratio bar */}
               <div className="zen-card p-5">
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-3">Principal vs Interest</p>
+                <p className="text-xs text-slate-500 uppercase tracking-wider mb-3">{t.loans.principal} vs {t.loans.totalInterest}</p>
                 <div className="flex rounded-full overflow-hidden h-5">
                   <div className="bg-gold-500 flex items-center justify-center text-[10px] font-mono font-semibold text-primary-foreground" style={{ width: `${principalPct}%` }}>
                     {principalPct.toFixed(1)}%
@@ -141,15 +144,15 @@ export default function Loans() {
                   </div>
                 </div>
                 <div className="flex justify-between mt-2 text-xs text-slate-500">
-                  <span>Principal: {formatCurrency(principal)}</span>
-                  <span>Interest: {formatCurrency(result.totalInterest)}</span>
+                  <span>{t.loans.principal}: {formatCurrency(principal)}</span>
+                  <span>{t.loans.totalInterest}: {formatCurrency(result.totalInterest)}</span>
                 </div>
               </div>
 
               {/* Chart */}
               {chartData.length > 0 && (
                 <div className="zen-card p-5">
-                  <h3 className="font-display text-lg font-semibold mb-4">Principal vs Interest Per Payment</h3>
+                  <h3 className="font-display text-lg font-semibold mb-4">{t.loans.principalPaid} vs {t.loans.interestPaid}</h3>
                   <ResponsiveContainer width="100%" height={250}>
                     <AreaChart data={chartData}>
                       <defs>
@@ -176,9 +179,9 @@ export default function Loans() {
               {/* Amortization */}
               <div className="zen-card p-5">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-display text-lg font-semibold">Full Amortization Schedule ({result.n} payments)</h3>
+                  <h3 className="font-display text-lg font-semibold">{t.loans.amortization} ({result.n} {t.loans.payment.toLowerCase()}s)</h3>
                   <button onClick={() => setShowSchedule(!showSchedule)} className="flex items-center gap-1 text-xs text-gold hover:underline">
-                    {showSchedule ? 'Collapse' : 'Expand'} {showSchedule ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    {showSchedule ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                   </button>
                 </div>
                 {showSchedule && (
@@ -187,10 +190,10 @@ export default function Loans() {
                       <thead className="sticky top-0 bg-navy-800">
                         <tr className="text-xs text-slate-500 uppercase tracking-wider border-b border-border">
                           <th className="text-left py-2 px-3">#</th>
-                          <th className="text-right py-2 px-3">Payment</th>
-                          <th className="text-right py-2 px-3">Principal</th>
-                          <th className="text-right py-2 px-3">Interest</th>
-                          <th className="text-right py-2 px-3">Balance</th>
+                          <th className="text-right py-2 px-3">{t.loans.payment}</th>
+                          <th className="text-right py-2 px-3">{t.loans.principalPaid}</th>
+                          <th className="text-right py-2 px-3">{t.loans.interestPaid}</th>
+                          <th className="text-right py-2 px-3">{t.loans.remainingBal}</th>
                         </tr>
                       </thead>
                       <tbody>
