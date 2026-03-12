@@ -91,6 +91,8 @@ const T = {
     lastActivity: "Last Activity",
     noActivity: "No transactions yet",
     pendingLabel: "pending",
+    accountOwner: "Account Owner",
+    accountCreatedFor: "Account will be created for",
   },
   fr: {
     appName: "ZENTRA",
@@ -181,6 +183,8 @@ const T = {
     lastActivity: "Dernière Activité",
     noActivity: "Aucune transaction",
     pendingLabel: "en attente",
+    accountOwner: "Propriétaire du Compte",
+    accountCreatedFor: "Le compte sera créé pour",
   },
 };
 
@@ -626,7 +630,7 @@ function NewAccountPage({ t, user, onBack, onCreated }) {
       const res = await api.createAccount(user.name, type);
       await api.linkAccount(res.id);
       setCreated(res);
-      onCreated && onCreated(res);
+      if (onCreated) onCreated();
     } catch(e) { setError(e.message); }
     setLoading(false);
   };
@@ -649,6 +653,13 @@ function NewAccountPage({ t, user, onBack, onCreated }) {
       <div className="page-title">{t.openNewAccount}</div>
       <div className="page-subtitle">{t.openNewSub}</div>
       {error && <div className="error-msg">{error}</div>}
+
+      <div className="field" style={{ marginBottom: 20 }}>
+        <label>🔒 {t.accountOwner}</label>
+        <input type="text" value={user.name} disabled style={{ opacity: 0.6 }} />
+        <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{t.accountCreatedFor} {user.name}</div>
+      </div>
+
       {types.map(a => (
         <div key={a.key} onClick={() => setType(a.key)}
           style={{ background: type===a.key ? "rgba(201,168,76,0.06)" : "var(--navy3)", border:`1px solid ${type===a.key?"var(--gold)":"var(--border)"}`, borderRadius:14, padding:"18px 16px", marginBottom:10, cursor:"pointer", display:"flex", gap:14, alignItems:"flex-start", transition:"all .2s" }}>
@@ -1228,7 +1239,12 @@ export default function ZentraPortal() {
 
   const handleLogin = (u) => { setUser(u); setLang(u.language || "en"); setScreen("dashboard"); };
   const handleLogout = () => { setUser(null); setAccounts([]); setTransactions([]); setScreen("dashboard"); };
-  const handleAccountCreated = (a) => setAccounts(prev => [...prev, a]);
+  const handleAccountCreated = async () => {
+    try {
+      const data = await api.getAccounts();
+      setAccounts(data.accounts || []);
+    } catch {}
+  };
   const handleUserUpdated = (u) => setUser(u);
 
   const handleTxnSuccess = useCallback((mode, fromId, toId, amount) => {
