@@ -17,6 +17,7 @@ Endpoints:
 import csv
 import io
 import uuid
+import logging
 from datetime import date
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, UploadFile, File
@@ -28,6 +29,7 @@ from ..models.schemas import (
 )
 
 router = APIRouter(prefix="/transactions", tags=["Transactions"])
+logger = logging.getLogger(__name__)
 
 # ── Record format constants ────────────────────────────────────────────────
 TXN_RECORD_LEN  = 100
@@ -89,18 +91,25 @@ def _read_accounts() -> list[dict]:
         raw_bal = line[45:57]
         sign = raw_bal[0]
         digits = raw_bal[1:]
-        balance = int(digits) / 100.0
+        try:
+            balance = int(digits) / 100.0
+        except ValueError:
+            balance = 0.0
         if sign == "-":
             balance = -balance
         od_raw = line[57:66]
-        od_limit = int(od_raw) / 100.0
+        try:
+            od_limit = int(od_raw) / 100.0
+        except ValueError:
+            od_limit = 0.0
+        raw_status = line[66:67].strip().upper()
         accounts.append({
             "id": line[0:10].strip(),
             "name": line[10:35].strip(),
             "type": line[35:45].strip(),
             "balance": balance,
             "overdraftLimit": od_limit,
-            "status": line[66:67].strip(),
+            "status": raw_status if raw_status else "A",
         })
     return accounts
 
@@ -405,7 +414,8 @@ async def deposit(req: DepositRequest):
     acct = _get_account(req.account_id)
     if not acct:
         raise HTTPException(status_code=404, detail=f"Account {req.account_id} not found")
-    if acct["status"] != "A":
+    if acct["status"].strip().upper() not in ("A", "ACTIVE"):
+        logger.warning(f"Deposit rejected: account {req.account_id} status='{acct['status']}'")
         raise HTTPException(status_code=400, detail="Account is not active")
 
     today = date.today().isoformat()
@@ -451,7 +461,8 @@ async def withdraw(req: WithdrawRequest):
     acct = _get_account(req.account_id)
     if not acct:
         raise HTTPException(status_code=404, detail=f"Account {req.account_id} not found")
-    if acct["status"] != "A":
+    if acct["status"].strip().upper() not in ("A", "ACTIVE"):
+        logger.warning(f"Withdraw rejected: account {req.account_id} status='{acct['status']}'")
         raise HTTPException(status_code=400, detail="Account is not active")
 
     available = acct["balance"] + acct["overdraftLimit"]
@@ -512,9 +523,14 @@ async def transfer(req: TransferRequest):
         raise HTTPException(status_code=404, detail=f"Source account {req.from_account_id} not found")
     if not to_acct:
         raise HTTPException(status_code=404, detail=f"Destination account {req.to_account_id} not found")
-    if from_acct["status"] != "A":
+
+    logger.info(f"Transfer: from={req.from_account_id} status='{from_acct['status']}', to={req.to_account_id} status='{to_acct['status']}'")
+
+    if from_acct["status"].strip().upper() not in ("A", "ACTIVE"):
+        logger.warning(f"Transfer rejected: source account {req.from_account_id} status='{from_acct['status']}'")
         raise HTTPException(status_code=400, detail="Source account is not active")
-    if to_acct["status"] != "A":
+    if to_acct["status"].strip().upper() not in ("A", "ACTIVE"):
+        logger.warning(f"Transfer rejected: dest account {req.to_account_id} status='{to_acct['status']}'")
         raise HTTPException(status_code=400, detail="Destination account is not active")
 
     available = from_acct["balance"] + from_acct["overdraftLimit"]

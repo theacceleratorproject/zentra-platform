@@ -246,6 +246,68 @@ const T = {
   },
 };
 
+// ─── API ERROR TRANSLATIONS ──────────────────────────────────────────────────
+const API_ERRORS = {
+  en: {
+    accountsDiffer: "Source and destination accounts must differ",
+    srcNotFound: "Source account not found",
+    destNotFound: "Destination account not found",
+    accountNotFound: "Account not found",
+    srcNotActive: "Source account is not active",
+    destNotActive: "Destination account is not active",
+    accountNotActive: "Account is not active",
+    insufficientFunds: "Insufficient funds",
+    invalidCredentials: "Invalid email or password",
+    sessionExpired: "Session expired. Please sign in again.",
+    wrongPassword: "Current password is incorrect",
+    samePassword: "New password must differ from current password",
+    alreadyClosed: "Account is already closed",
+    nonZeroBalance: "Cannot close account with non-zero balance",
+    connectionError: "Connection error. Please try again.",
+  },
+  fr: {
+    accountsDiffer: "Les comptes source et destination doivent être différents",
+    srcNotFound: "Compte source introuvable",
+    destNotFound: "Compte destination introuvable",
+    accountNotFound: "Compte introuvable",
+    srcNotActive: "Le compte source n'est pas actif",
+    destNotActive: "Le compte destination n'est pas actif",
+    accountNotActive: "Le compte n'est pas actif",
+    insufficientFunds: "Fonds insuffisants",
+    invalidCredentials: "Email ou mot de passe invalide",
+    sessionExpired: "Session expirée. Veuillez vous reconnecter.",
+    wrongPassword: "Mot de passe actuel incorrect",
+    samePassword: "Le nouveau mot de passe doit être différent",
+    alreadyClosed: "Ce compte est déjà fermé",
+    nonZeroBalance: "Impossible de fermer un compte avec un solde non nul",
+    connectionError: "Erreur de connexion. Veuillez réessayer.",
+  },
+};
+
+const ERROR_PATTERNS = [
+  [/source and destination.*must differ/i, "accountsDiffer"],
+  [/source account.*not found/i, "srcNotFound"],
+  [/destination account.*not found/i, "destNotFound"],
+  [/not found/i, "accountNotFound"],
+  [/source account is not active/i, "srcNotActive"],
+  [/destination account is not active/i, "destNotActive"],
+  [/not active/i, "accountNotActive"],
+  [/insufficient funds/i, "insufficientFunds"],
+  [/invalid email or password/i, "invalidCredentials"],
+  [/session expired/i, "sessionExpired"],
+  [/password is incorrect/i, "wrongPassword"],
+  [/must differ from current/i, "samePassword"],
+  [/already closed/i, "alreadyClosed"],
+  [/non-zero balance/i, "nonZeroBalance"],
+];
+
+function translateError(message, lang) {
+  for (const [pattern, key] of ERROR_PATTERNS) {
+    if (pattern.test(message)) return (API_ERRORS[lang] || API_ERRORS.en)[key];
+  }
+  return message;
+}
+
 // ─── CSS ──────────────────────────────────────────────────────────────────────
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500&display=swap');
@@ -515,7 +577,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
         onLogin({ ...res.user, account_ids: [] }, res.token);
       }
     } catch (e) {
-      setError(e.message === "Email already registered" ? t.registerError : e.message || t.loginError);
+      setError(e.message === "Email already registered" ? t.registerError : translateError(e.message, lang) || t.loginError);
     }
     setLoading(false);
   };
@@ -560,7 +622,7 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
 }
 
 // ─── TRANSACTION FLOW (shared confirm→success pattern) ───────────────────────
-function TxnFlow({ t, accounts, onBack, mode, onTxnSuccess, defaultAccountId }) {
+function TxnFlow({ t, accounts, onBack, mode, onTxnSuccess, defaultAccountId, lang }) {
   const [amount, setAmount] = useState("");
   const [acctId, setAcctId] = useState(defaultAccountId || accounts[0]?.id || "");
   const [toAcctId, setToAcctId] = useState(accounts[1]?.id || accounts[0]?.id || "");
@@ -592,7 +654,7 @@ function TxnFlow({ t, accounts, onBack, mode, onTxnSuccess, defaultAccountId }) 
       setStep("success");
       if (onTxnSuccess) onTxnSuccess(mode, acctId, toAcctId, parseFloat(amount));
     } catch (e) {
-      setError(e.message);
+      setError(translateError(e.message, lang));
       setStep("form");
     }
     setLoading(false);
@@ -628,7 +690,7 @@ function TxnFlow({ t, accounts, onBack, mode, onTxnSuccess, defaultAccountId }) 
       <div className="amount-display">
         <span className="currency">$</span>
         {step === "form"
-          ? <input className="amount-input" type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.00" />
+          ? <input className="amount-input" type="number" value={amount} onChange={e => { setAmount(e.target.value); setError(""); }} placeholder="0.00" />
           : <span style={{ fontFamily:"Cormorant Garamond", fontSize:52, fontWeight:300 }}>{fmt(parseFloat(amount)||0)}</span>
         }
       </div>
@@ -647,7 +709,7 @@ function TxnFlow({ t, accounts, onBack, mode, onTxnSuccess, defaultAccountId }) 
         <>
           <div className="field">
             <label>{mode === "deposit" ? t.destination : mode === "withdraw" ? t.source : t.fromAccount}</label>
-            <select value={acctId} onChange={e => setAcctId(e.target.value)}>
+            <select value={acctId} onChange={e => { setAcctId(e.target.value); setError(""); }}>
               {accounts.filter(a => a.status === "A").map(a => (
                 <option key={a.id} value={a.id}>{a.id} — {a.type} ({fmtFull(a.balance)})</option>
               ))}
@@ -656,7 +718,7 @@ function TxnFlow({ t, accounts, onBack, mode, onTxnSuccess, defaultAccountId }) 
           {mode === "transfer" && (
             <div className="field">
               <label>{t.toAccount}</label>
-              <select value={toAcctId} onChange={e => setToAcctId(e.target.value)}>
+              <select value={toAcctId} onChange={e => { setToAcctId(e.target.value); setError(""); }}>
                 {accounts.filter(a => a.id !== acctId && a.status === "A").map(a => (
                   <option key={a.id} value={a.id}>{a.id} — {a.type} ({fmtFull(a.balance)})</option>
                 ))}
@@ -1567,9 +1629,9 @@ export default function ZentraPortal() {
   const renderScreen = () => {
     switch (screen) {
       case "dashboard":  return <Dashboard t={t} user={user} accounts={accounts} transactions={transactions} onNav={navTo} onSelectAccount={setSelectedAccount} selectedAccount={selectedAccount} pendingAccounts={pendingAccounts} />;
-      case "deposit":    return <TxnFlow t={t} accounts={accounts} onBack={() => navTo("dashboard")} mode="deposit" onTxnSuccess={handleTxnSuccess} defaultAccountId={selectedAccount?.id} />;
-      case "withdraw":   return <TxnFlow t={t} accounts={accounts} onBack={() => navTo("dashboard")} mode="withdraw" onTxnSuccess={handleTxnSuccess} defaultAccountId={selectedAccount?.id} />;
-      case "transfer":   return <TxnFlow t={t} accounts={accounts} onBack={() => navTo("dashboard")} mode="transfer" onTxnSuccess={handleTxnSuccess} defaultAccountId={selectedAccount?.id} />;
+      case "deposit":    return <TxnFlow t={t} lang={lang} accounts={accounts} onBack={() => navTo("dashboard")} mode="deposit" onTxnSuccess={handleTxnSuccess} defaultAccountId={selectedAccount?.id} />;
+      case "withdraw":   return <TxnFlow t={t} lang={lang} accounts={accounts} onBack={() => navTo("dashboard")} mode="withdraw" onTxnSuccess={handleTxnSuccess} defaultAccountId={selectedAccount?.id} />;
+      case "transfer":   return <TxnFlow t={t} lang={lang} accounts={accounts} onBack={() => navTo("dashboard")} mode="transfer" onTxnSuccess={handleTxnSuccess} defaultAccountId={selectedAccount?.id} />;
       case "history":    return <HistoryPage t={t} accounts={accounts} onBack={() => navTo("dashboard")} />;
       case "new-account": return <NewAccountPage t={t} user={user} onBack={() => navTo("dashboard")} onCreated={handleAccountCreated} />;
       case "account-detail": return <AccountDetailPage t={t} account={selectedAccount} onBack={() => navTo("dashboard")} onNav={navTo} onSelectAccount={setSelectedAccount} />;
