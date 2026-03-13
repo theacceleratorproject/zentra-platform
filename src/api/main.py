@@ -14,6 +14,7 @@ ReDoc:        http://localhost:8000/redoc
 """
 
 import os
+from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 
@@ -29,8 +30,45 @@ from .routers.auth import startup as auth_startup, current_user
 from .services import cobol
 from .models.schemas import HealthResponse
 
+# ── Nightly Batch Scheduler ────────────────────────────────
+EST = pytz.timezone("America/New_York")
+scheduler = AsyncIOScheduler(timezone=EST)
+LAST_BATCH_FILE = Path(os.getenv("ZENTRA_BATCH_LOG", "data/output/last_batch.txt"))
+
+
+async def run_nightly_batch():
+    print(f"[BATCH] Starting nightly batch at {datetime.now()}")
+    try:
+        result = cobol.run_full_batch()
+        LAST_BATCH_FILE.parent.mkdir(parents=True, exist_ok=True)
+        LAST_BATCH_FILE.write_text(datetime.now().isoformat())
+        passed = result.get("steps_passed", 0)
+        total = result.get("steps_run", 0)
+        print(f"[BATCH] Completed: {passed}/{total} steps passed")
+    except Exception as e:
+        print(f"[BATCH] Failed: {e}")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # startup
+    auth_startup()
+    scheduler.add_job(
+        run_nightly_batch,
+        CronTrigger(hour=22, minute=0, timezone=EST),
+        id="nightly_batch",
+        replace_existing=True,
+    )
+    scheduler.start()
+    print("[SCHEDULER] Nightly batch scheduled for 22:00 EST")
+    yield
+    # shutdown
+    scheduler.shutdown(wait=False)
+
+
 # ── App Setup ───────────────────────────────────────────
 app = FastAPI(
+    lifespan=lifespan,
     title="Zentra Banking API",
     description="""
 ## Zentra Bank — COBOL-Core Banking Platform API
@@ -88,44 +126,6 @@ app.include_router(transactions.router)
 app.include_router(reports.router)
 app.include_router(batch.router)
 app.include_router(auth.router)
-
-
-# ── Nightly Batch Scheduler ────────────────────────────────
-EST = pytz.timezone("America/New_York")
-scheduler = AsyncIOScheduler(timezone=EST)
-LAST_BATCH_FILE = Path(os.getenv("ZENTRA_BATCH_LOG", "data/output/last_batch.txt"))
-
-
-async def run_nightly_batch():
-    print(f"[BATCH] Starting nightly batch at {datetime.now()}")
-    try:
-        result = cobol.run_full_batch()
-        LAST_BATCH_FILE.parent.mkdir(parents=True, exist_ok=True)
-        LAST_BATCH_FILE.write_text(datetime.now().isoformat())
-        passed = result.get("steps_passed", 0)
-        total = result.get("steps_run", 0)
-        print(f"[BATCH] Completed: {passed}/{total} steps passed")
-    except Exception as e:
-        print(f"[BATCH] Failed: {e}")
-
-
-# ── DB Init + Scheduler Startup ───────────────────────────
-@app.on_event("startup")
-def on_startup():
-    auth_startup()
-    scheduler.add_job(
-        run_nightly_batch,
-        CronTrigger(hour=22, minute=0, timezone=EST),
-        id="nightly_batch",
-        replace_existing=True,
-    )
-    scheduler.start()
-    print("[SCHEDULER] Nightly batch scheduled for 22:00 EST")
-
-
-@app.on_event("shutdown")
-def on_shutdown():
-    scheduler.shutdown(wait=False)
 
 
 # ── Root ────────────────────────────────────────────────

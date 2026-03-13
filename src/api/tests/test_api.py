@@ -141,7 +141,7 @@ class TestTransactions:
             rejected.unlink()
 
         r = client.get("/transactions/rejected")
-        assert r.status_code == 200
+        assert r.status_code == 404
 
         # Restore
         if existed:
