@@ -99,6 +99,12 @@ const T = {
     confirmedBalance: "Confirmed",
     pendingBalance: "Pending",
     includesPending: "Includes pending transactions",
+    accessCode: "Access Code",
+    accessCodeHelper: "Contact your administrator for an access code",
+    invalidAccessCode: "Invalid access code. Please contact your administrator.",
+    demoModeBanner: "Demo Mode — All data will be cleared when you sign out",
+    masterBadge: "MASTER",
+    demoBadge: "DEMO",
     holderName: "Account Holder Name",
     holderSection: "Account Holder",
     configSection: "Account Configuration",
@@ -223,6 +229,12 @@ const T = {
     confirmedBalance: "Solde confirmé",
     pendingBalance: "En attente",
     includesPending: "Inclut les transactions en attente",
+    accessCode: "Code d'Accès",
+    accessCodeHelper: "Contactez votre administrateur pour un code d'accès",
+    invalidAccessCode: "Code d'accès invalide. Veuillez contacter votre administrateur.",
+    demoModeBanner: "Mode Démo — Toutes les données seront effacées à la déconnexion",
+    masterBadge: "MASTER",
+    demoBadge: "DEMO",
     holderName: "Nom du Titulaire",
     holderSection: "Titulaire du Compte",
     configSection: "Configuration du Compte",
@@ -269,6 +281,7 @@ const API_ERRORS = {
     samePassword: "New password must differ from current password",
     alreadyClosed: "Account is already closed",
     nonZeroBalance: "Cannot close account with non-zero balance",
+    invalidAccessCode: "Invalid access code. Please contact your administrator.",
     connectionError: "Connection error. Please try again.",
   },
   fr: {
@@ -286,6 +299,7 @@ const API_ERRORS = {
     samePassword: "Le nouveau mot de passe doit être différent",
     alreadyClosed: "Ce compte est déjà fermé",
     nonZeroBalance: "Impossible de fermer un compte avec un solde non nul",
+    invalidAccessCode: "Code d'accès invalide. Veuillez contacter votre administrateur.",
     connectionError: "Erreur de connexion. Veuillez réessayer.",
   },
 };
@@ -305,6 +319,7 @@ const ERROR_PATTERNS = [
   [/must differ from current/i, "samePassword"],
   [/already closed/i, "alreadyClosed"],
   [/non-zero balance/i, "nonZeroBalance"],
+  [/invalid access code/i, "invalidAccessCode"],
 ];
 
 function translateError(message, lang) {
@@ -558,11 +573,12 @@ async function apiFetch(path, options = {}, token = null) {
 }
 
 const api = {
-  register: (email, name, password, language) =>
-    apiFetch("/auth/register", { method:"POST", body: JSON.stringify({ email, name, password, language }) }),
+  register: (email, name, password, language, access_code) =>
+    apiFetch("/auth/register", { method:"POST", body: JSON.stringify({ email, name, password, language, access_code }) }),
   login: (email, password) =>
     apiFetch("/auth/login", { method:"POST", body: JSON.stringify({ email, password }) }),
   logout: () => apiFetch("/auth/logout", { method:"POST" }),
+  deleteAccount: () => apiFetch("/auth/account", { method:"DELETE" }),
   getMe: () => apiFetch("/auth/me"),
   updateMe: (fields) => apiFetch("/auth/me", { method:"PATCH", body: JSON.stringify(fields) }),
   changePassword: (old_password, new_password) =>
@@ -595,7 +611,7 @@ const api = {
 // ─── AUTH SCREEN ─────────────────────────────────────────────────────────────
 function AuthScreen({ onLogin, lang, setLang, t }) {
   const [tab, setTab] = useState("login");
-  const [form, setForm] = useState({ email:"", password:"", name:"", confirmPw:"" });
+  const [form, setForm] = useState({ email:"", password:"", name:"", confirmPw:"", accessCode:"" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -611,7 +627,8 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
         onLogin({ ...res.user, account_ids: res.account_ids || [] }, res.token);
       } else {
         if (!form.name) { setError(t.fieldRequired); setLoading(false); return; }
-        const res = await api.register(form.email, form.name, form.password, lang);
+        if (!form.accessCode) { setError(t.fieldRequired); setLoading(false); return; }
+        const res = await api.register(form.email, form.name, form.password, lang, form.accessCode);
         setToken(res.token);
         onLogin({ ...res.user, account_ids: [] }, res.token);
       }
@@ -638,10 +655,17 @@ function AuthScreen({ onLogin, lang, setLang, t }) {
         </div>
         {error && <div className="error-msg">{error}</div>}
         {tab === "register" && (
-          <div className="field">
-            <label>{t.name}</label>
-            <input type="text" placeholder="Marck Pierre" value={form.name} onChange={e => set("name", e.target.value)} />
-          </div>
+          <>
+            <div className="field">
+              <label>{t.name}</label>
+              <input type="text" placeholder="Marck Pierre" value={form.name} onChange={e => set("name", e.target.value)} />
+            </div>
+            <div className="field">
+              <label>{t.accessCode}</label>
+              <input type="password" placeholder="••••••" value={form.accessCode} onChange={e => set("accessCode", e.target.value)} />
+              <div style={{ fontSize:11, color:"var(--muted)", marginTop:4 }}>{t.accessCodeHelper}</div>
+            </div>
+          </>
         )}
         <div className="field">
           <label>{t.email}</label>
@@ -1353,6 +1377,7 @@ function Dashboard({ t, user, accounts, transactions, onNav, onSelectAccount, se
   const [searchQuery, setSearchQuery] = useState("");
   const [lowBalDismissed, setLowBalDismissed] = useState(false);
   const [lowBalExpanded, setLowBalExpanded] = useState(false);
+  const [demoDismissed, setDemoDismissed] = useState(false);
   const scrollRef = useRef(null);
   const heroRef = useRef(null);
 
@@ -1399,6 +1424,13 @@ function Dashboard({ t, user, accounts, transactions, onNav, onSelectAccount, se
         <div className="greeting-sub">{greeting(t)}</div>
         <div className="greeting-name">{user.name.split(" ")[0]}</div>
       </div>
+
+      {user.account_tier === "demo" && !demoDismissed && (
+        <div style={{ position:"relative", background:"rgba(201,168,76,0.08)", border:"1px solid rgba(201,168,76,0.2)", borderRadius:10, padding:"10px 14px", paddingRight:32, fontSize:12, color:"var(--gold)", marginBottom:12 }}>
+          ⚠ {t.demoModeBanner}
+          <button onClick={() => setDemoDismissed(true)} style={{ position:"absolute", top:8, right:10, background:"none", border:"none", color:"var(--muted)", cursor:"pointer", fontSize:14, padding:0, lineHeight:1 }}>×</button>
+        </div>
+      )}
 
       {/* ── Priority 1: Overdraft (critical, individual, capped at 2 + summary) ── */}
       {overdrawnAccts.slice(0, 2).map(a => (
@@ -1660,7 +1692,16 @@ export default function ZentraPortal() {
   const navTo = useCallback(s => setScreen(s), []);
 
   const handleLogin = (u) => { setUser(u); setLang(u.language || "en"); setScreen("dashboard"); };
-  const handleLogout = () => { setUser(null); setAccounts([]); setTransactions([]); setScreen("dashboard"); };
+  const handleLogout = async () => {
+    if (user?.account_tier === "demo") {
+      try { await api.deleteAccount(); } catch {}
+      localStorage.clear();
+    } else {
+      try { await api.logout(); } catch {}
+      setToken(null);
+    }
+    setUser(null); setAccounts([]); setTransactions([]); setScreen("dashboard");
+  };
   const handleAccountCreated = async () => {
     try {
       const u = await api.getMe();
@@ -1732,7 +1773,15 @@ export default function ZentraPortal() {
       <style>{CSS}</style>
       <div className="app">
         <div className="topbar">
-          <div className="topbar-logo">ZENTR<span>A</span></div>
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <div className="topbar-logo">ZENTR<span>A</span></div>
+            {user?.account_tier === "master" && (
+              <span style={{ background:"var(--gold)", color:"var(--navy)", padding:"2px 8px", borderRadius:4, fontSize:10, letterSpacing:2, fontWeight:600 }}>{t.masterBadge}</span>
+            )}
+            {user?.account_tier === "demo" && (
+              <span style={{ border:"1px solid var(--muted)", color:"var(--muted)", padding:"2px 8px", borderRadius:4, fontSize:10, letterSpacing:2 }}>{t.demoBadge}</span>
+            )}
+          </div>
           <div className="topbar-actions">
             <div className="icon-btn">
               <div className="notif-dot" />🔔

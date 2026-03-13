@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash TEXT    NOT NULL,
     phone         TEXT    DEFAULT '',
     language      TEXT    DEFAULT 'en',
+    account_tier  TEXT    DEFAULT 'demo',
     notif_low_bal INTEGER DEFAULT 1,
     notif_txn     INTEGER DEFAULT 1,
     notif_batch   INTEGER DEFAULT 1,
@@ -75,6 +76,10 @@ def init_db():
     """Create tables if they don't exist. Safe to call on every startup."""
     with get_db() as conn:
         conn.executescript(SCHEMA)
+        # Migrate: add account_tier column if missing (existing DBs)
+        cols = [r[1] for r in conn.execute("PRAGMA table_info(users)").fetchall()]
+        if "account_tier" not in cols:
+            conn.execute("ALTER TABLE users ADD COLUMN account_tier TEXT DEFAULT 'demo'")
     print(f"[Zentra DB] Initialized at {DB_PATH}")
 
 
@@ -100,17 +105,17 @@ def verify_password(password: str, stored_hash: str) -> bool:
 # USER OPERATIONS
 # ─────────────────────────────────────────────────────────────────────────────
 
-def create_user(email: str, name: str, password: str) -> dict:
+def create_user(email: str, name: str, password: str, account_tier: str = "demo") -> dict:
     with get_db() as conn:
         existing = conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
         if existing:
             raise ValueError("Email already registered")
         pw_hash = hash_password(password)
         cur = conn.execute(
-            "INSERT INTO users (email, name, password_hash) VALUES (?, ?, ?)",
-            (email.lower().strip(), name.strip(), pw_hash)
+            "INSERT INTO users (email, name, password_hash, account_tier) VALUES (?, ?, ?, ?)",
+            (email.lower().strip(), name.strip(), pw_hash, account_tier)
         )
-        return {"id": cur.lastrowid, "email": email, "name": name}
+        return {"id": cur.lastrowid, "email": email, "name": name, "account_tier": account_tier}
 
 
 def authenticate_user(email: str, password: str) -> dict | None:
@@ -219,3 +224,18 @@ def unlink_account(user_id: int, account_id: str) -> None:
             "DELETE FROM account_ownership WHERE user_id = ? AND account_id = ?",
             (user_id, account_id)
         )
+
+
+def delete_user_completely(user_id: int) -> list[str]:
+    """Delete a demo user and all their data. Returns list of owned account IDs."""
+    with get_db() as conn:
+        # Get owned account IDs before deletion
+        rows = conn.execute(
+            "SELECT account_id FROM account_ownership WHERE user_id = ?", (user_id,)
+        ).fetchall()
+        owned_ids = [r["account_id"] for r in rows]
+        # Delete sessions, ownership, and user (CASCADE handles most, but be explicit)
+        conn.execute("DELETE FROM portal_sessions WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM account_ownership WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    return owned_ids

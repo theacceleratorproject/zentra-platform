@@ -14,6 +14,7 @@ from fastapi import APIRouter, HTTPException, Header, Depends
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from typing import Optional
+import os
 import io
 import csv
 from datetime import date
@@ -22,9 +23,14 @@ from pathlib import Path
 from ..database import (
     init_db, create_user, authenticate_user, get_user_by_id,
     update_user, update_password, create_session, validate_session,
-    delete_session, link_account, get_user_account_ids, unlink_account
+    delete_session, link_account, get_user_account_ids, unlink_account,
+    delete_user_completely
 )
 from ..services import cobol
+
+# Access codes from environment (never committed to source)
+MASTER_CODE = os.getenv("MASTER_ACCESS_CODE", "11A2B")
+DEMO_CODE   = os.getenv("DEMO_ACCESS_CODE", "0369AV")
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -49,10 +55,11 @@ def current_user(authorization: str = Header(...)) -> dict:
 # ─────────────────────────────────────────────────────────────────────────────
 
 class RegisterRequest(BaseModel):
-    email:    str = Field(..., examples=["marck@zentra.bank"])
-    name:     str = Field(..., min_length=2, max_length=25)
-    password: str = Field(..., min_length=8)
-    language: str = Field("en", pattern=r"^(en|fr)$")
+    email:       str = Field(..., examples=["marck@zentra.bank"])
+    name:        str = Field(..., min_length=2, max_length=25)
+    password:    str = Field(..., min_length=8)
+    language:    str = Field("en", pattern=r"^(en|fr)$")
+    access_code: str = Field(..., min_length=4, max_length=10)
 
 
 class LoginRequest(BaseModel):
@@ -88,21 +95,30 @@ class LinkAccountRequest(BaseModel):
 @router.post("/register")
 def register(req: RegisterRequest):
     """
-    Create a new portal user. Does NOT auto-create a bank account —
-    user opens accounts separately via POST /accounts.
+    Create a new portal user. Requires a valid access code.
+    Does NOT auto-create a bank account — user opens accounts separately.
     """
+    # Validate access code → determine tier
+    if req.access_code == MASTER_CODE:
+        tier = "master"
+    elif req.access_code == DEMO_CODE:
+        tier = "demo"
+    else:
+        raise HTTPException(status_code=403, detail="Invalid access code")
+
     try:
-        user = create_user(req.email, req.name, req.password)
+        user = create_user(req.email, req.name, req.password, account_tier=tier)
         token = create_session(user["id"])
         update_user(user["id"], {"language": req.language})
         return {
             "success": True,
             "token": token,
             "user": {
-                "id":       user["id"],
-                "email":    req.email,
-                "name":     req.name,
-                "language": req.language,
+                "id":           user["id"],
+                "email":        req.email,
+                "name":         req.name,
+                "language":     req.language,
+                "account_tier": tier,
             },
         }
     except ValueError as e:
@@ -128,6 +144,7 @@ def login(req: LoginRequest):
             "email":         user["email"],
             "name":          user["name"],
             "language":      user["language"],
+            "account_tier":  user.get("account_tier", "demo"),
             "notif_low_bal": bool(user["notif_low_bal"]),
             "notif_txn":     bool(user["notif_txn"]),
             "notif_batch":   bool(user["notif_batch"]),
@@ -156,6 +173,7 @@ def get_me(user: dict = Depends(current_user)):
         "name":          user["name"],
         "phone":         user.get("phone", ""),
         "language":      user.get("language", "en"),
+        "account_tier":  user.get("account_tier", "demo"),
         "notif_low_bal": bool(user.get("notif_low_bal", 1)),
         "notif_txn":     bool(user.get("notif_txn", 1)),
         "notif_batch":   bool(user.get("notif_batch", 1)),
@@ -295,6 +313,36 @@ def download_statement(
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DEMO ACCOUNT CLEANUP
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.delete("/account")
+def delete_demo_account(user: dict = Depends(current_user)):
+    """Delete a demo account and all its data (accounts, transactions, user)."""
+    if user.get("account_tier", "demo") != "demo":
+        raise HTTPException(status_code=403, detail="Only demo accounts can be self-deleted")
+
+    # Delete user from SQLite, get list of owned account IDs
+    owned_ids = delete_user_completely(user["id"])
+
+    # Remove demo accounts from ACCOUNTS-MASTER.dat
+    accounts_file = cobol.DATA_INPUT / "ACCOUNTS-MASTER.dat"
+    if accounts_file.exists() and owned_ids:
+        lines = accounts_file.read_text().splitlines()
+        cleaned = [l for l in lines if len(l) >= 10 and l[0:10].strip() not in owned_ids]
+        accounts_file.write_text("\n".join(cleaned) + ("\n" if cleaned else ""))
+
+    # Remove demo transactions from DAILY-TRANSACTIONS.dat
+    txn_file = cobol.DATA_INPUT / "DAILY-TRANSACTIONS.dat"
+    if txn_file.exists() and owned_ids:
+        lines = txn_file.read_text().splitlines()
+        cleaned = [l for l in lines if len(l) >= 20 and l[10:20].strip() not in owned_ids]
+        txn_file.write_text("\n".join(cleaned) + ("\n" if cleaned else ""))
+
+    return {"success": True, "deleted": True, "accounts_removed": owned_ids}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
