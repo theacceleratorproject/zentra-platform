@@ -359,3 +359,4 @@ See [Deployment Guide](docs/deployment-guide.md) for step-by-step EC2 setup.
 Built by a Data Scientist + Finance professional who bridges legacy COBOL systems with modern analytics infrastructure.
 
 **Contact:** [Your info here]
+# auto-deploy enabled Fri Mar 13 15:54:56 UTC 2026
