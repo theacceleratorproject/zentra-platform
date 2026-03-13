@@ -10,6 +10,10 @@ jobs:
   api-tests:
     name: API Tests (Python + COBOL)
     runs-on: ubuntu-latest
+    env:
+      MASTER_ACCESS_CODE: test-master
+      DEMO_ACCESS_CODE: test-demo
+      PYTHONPATH: .
     steps:
       - uses: actions/checkout@v4
 

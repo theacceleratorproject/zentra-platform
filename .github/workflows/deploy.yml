@@ -23,20 +23,14 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/zentra.pem
+          printf '%s' "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/zentra.pem
           chmod 600 ~/.ssh/zentra.pem
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
 
-      - name: Deploy to EC2
+      - name: Deploy
         run: |
-          ssh -i ~/.ssh/zentra.pem -o StrictHostKeyChecking=no \
-            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'ENDSSH'
-            cd /home/ubuntu/zentra-platform
-            git pull origin main
-            sudo chmod 666 /var/run/docker.sock
-            export FRONTEND_PORT=3000
-            docker compose build frontend
-            docker compose up -d
-            sleep 10
-            curl -f http://localhost:8000/health && echo "Deploy successful" || exit 1
-          ENDSSH
+          ssh -i ~/.ssh/zentra.pem \
+            -o StrictHostKeyChecking=no \
+            -o BatchMode=yes \
+            "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" \
+            "cd /home/ubuntu/zentra-platform && git pull origin main && sudo chmod 666 /var/run/docker.sock && export FRONTEND_PORT=3000 && docker compose build frontend && docker compose up -d && sleep 10 && curl -f http://localhost:8000/health"
