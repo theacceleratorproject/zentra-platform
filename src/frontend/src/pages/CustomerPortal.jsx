@@ -12,6 +12,8 @@ const T = {
     goodMorning: "Good morning", goodAfternoon: "Good afternoon", goodEvening: "Good evening",
     totalPortfolio: "Total Portfolio",
     batchNote: "Nightly batch reconciliation runs at 22:00 EST",
+    lastBatch: "Last batch",
+    nextBatch: "Next",
     accounts: "Accounts", newAccount: "New Account",
     quickActions: "Quick Actions",
     deposit: "Deposit", withdraw: "Withdraw", transfer: "Transfer",
@@ -142,6 +144,8 @@ const T = {
     goodMorning: "Bonjour", goodAfternoon: "Bon après-midi", goodEvening: "Bonsoir",
     totalPortfolio: "Portefeuille Total",
     batchNote: "Traitement nocturne à 22h00 HNE",
+    lastBatch: "Dernier traitement",
+    nextBatch: "Prochain",
     accounts: "Comptes", newAccount: "Nouveau Compte",
     quickActions: "Actions Rapides",
     deposit: "Dépôt", withdraw: "Retrait", transfer: "Virement",
@@ -586,8 +590,12 @@ const api = {
   updateNotifications: (prefs) =>
     apiFetch("/auth/notifications", { method:"PATCH", body: JSON.stringify(prefs) }),
   getAccounts: () => apiFetch("/accounts"),
-  getTransactions: (accountId) => {
-    const q = accountId ? `?account_id=${accountId}&limit=50` : "?limit=50";
+  getTransactions: (accountId, ownedIds) => {
+    const q = accountId
+      ? `?account_id=${accountId}&limit=50`
+      : ownedIds
+        ? `?account_ids=${ownedIds}&limit=50`
+        : "?limit=50";
     return apiFetch(`/transactions/ledger${q}`);
   },
   deposit: (account_id, amount, description) =>
@@ -606,6 +614,7 @@ const api = {
     apiFetch(`/auth/accounts/${account_id}/unlink`, { method:"DELETE" }),
   downloadStatement: (account_id) =>
     apiFetch(`/auth/statement${account_id ? `?account_id=${account_id}` : ""}`),
+  getBatchStatus: () => apiFetch("/batch/status"),
 };
 
 // ─── AUTH SCREEN ─────────────────────────────────────────────────────────────
@@ -1079,18 +1088,20 @@ function AccountDetailPage({ t, account, onBack, onNav, onSelectAccount, transac
 }
 
 // ─── HISTORY ──────────────────────────────────────────────────────────────────
-function HistoryPage({ t, accounts, onBack }) {
+function HistoryPage({ t, accounts, onBack, user }) {
   const [txns, setTxns] = useState([]);
   const [filter, setFilter] = useState("ALL");
   const [acctFilter, setAcctFilter] = useState("ALL");
   const [loading, setLoading] = useState(true);
+  const ownedIds = (user?.account_ids || []).join(",");
 
   useEffect(() => {
-    api.getTransactions(acctFilter === "ALL" ? null : acctFilter)
+    const singleId = acctFilter === "ALL" ? null : acctFilter;
+    api.getTransactions(singleId, singleId ? null : ownedIds)
       .then(data => setTxns(data.transactions || []))
       .catch(() => setTxns([]))
       .finally(() => setLoading(false));
-  }, [acctFilter]);
+  }, [acctFilter, ownedIds]);
 
   const filtered = txns.filter(t => filter === "ALL" || t.type === filter || (filter === "WTH" && t.type === "WDR"));
 
@@ -1378,8 +1389,13 @@ function Dashboard({ t, user, accounts, transactions, onNav, onSelectAccount, se
   const [lowBalDismissed, setLowBalDismissed] = useState(false);
   const [lowBalExpanded, setLowBalExpanded] = useState(false);
   const [demoDismissed, setDemoDismissed] = useState(false);
+  const [batchStatus, setBatchStatus] = useState(null);
   const scrollRef = useRef(null);
   const heroRef = useRef(null);
+
+  useEffect(() => {
+    api.getBatchStatus().then(setBatchStatus).catch(() => {});
+  }, []);
 
   const filteredAccounts = searchQuery
     ? accounts.filter(a => a.id.toUpperCase().includes(("ZNT-" + searchQuery).toUpperCase()))
@@ -1553,7 +1569,9 @@ function Dashboard({ t, user, accounts, transactions, onNav, onSelectAccount, se
 
       <div className="batch-bar">
         <div className="batch-dot" />
-        <span>{t.batchNote}</span>
+        <span>{batchStatus?.last_run
+          ? `${t.lastBatch}: ${new Date(batchStatus.last_run).toLocaleString(undefined, { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" })} | ${t.nextBatch}: ${new Date(batchStatus.next_run).toLocaleString(undefined, { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" })}`
+          : t.batchNote}</span>
       </div>
 
       <div className="search-bar">
@@ -1685,7 +1703,7 @@ export default function ZentraPortal() {
       api.getAccounts().then(d => {
         setAccounts((d.accounts || []).filter(a => ownedIds.includes(a.id)));
       }).catch(() => {}),
-      api.getTransactions(null).then(d => setTransactions(d.transactions || [])).catch(() => {}),
+      api.getTransactions(null, ownedIds.join(",")).then(d => setTransactions(d.transactions || [])).catch(() => {}),
     ]).finally(() => setDataLoading(false));
   }, [user]);
 
@@ -1760,7 +1778,7 @@ export default function ZentraPortal() {
       case "deposit":    return <TxnFlow t={t} lang={lang} accounts={accounts} onBack={() => navTo("dashboard")} mode="deposit" onTxnSuccess={handleTxnSuccess} defaultAccountId={selectedAccount?.id} />;
       case "withdraw":   return <TxnFlow t={t} lang={lang} accounts={accounts} onBack={() => navTo("dashboard")} mode="withdraw" onTxnSuccess={handleTxnSuccess} defaultAccountId={selectedAccount?.id} />;
       case "transfer":   return <TxnFlow t={t} lang={lang} accounts={accounts} onBack={() => navTo("dashboard")} mode="transfer" onTxnSuccess={handleTxnSuccess} defaultAccountId={selectedAccount?.id} />;
-      case "history":    return <HistoryPage t={t} accounts={accounts} onBack={() => navTo("dashboard")} />;
+      case "history":    return <HistoryPage t={t} accounts={accounts} user={user} onBack={() => navTo("dashboard")} />;
       case "new-account": return <NewAccountPage t={t} user={user} onBack={() => navTo("dashboard")} onCreated={handleAccountCreated} />;
       case "account-detail": return <AccountDetailPage t={t} account={selectedAccount} onBack={() => navTo("dashboard")} onNav={navTo} onSelectAccount={setSelectedAccount} transactions={transactions} />;
       case "profile":    return <ProfilePage t={t} user={user} accounts={accounts} onLogout={handleLogout} onNav={navTo} onUpdated={handleUserUpdated} lang={lang} setLang={setLang} />;

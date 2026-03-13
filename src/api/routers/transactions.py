@@ -307,8 +307,14 @@ async def upload_transactions(file: UploadFile = File(...)):
     description="Returns parsed transaction records. "
                 "Optional: filter by account_id query parameter."
 )
-async def get_ledger(account_id: str | None = None, limit: int = 50):
+async def get_ledger(account_id: str | None = None, account_ids: str | None = None, limit: int = 50):
     records = []
+    # Build filter set: single account_id or comma-separated account_ids
+    filter_ids = None
+    if account_id:
+        filter_ids = {account_id}
+    elif account_ids:
+        filter_ids = {aid.strip() for aid in account_ids.split(",") if aid.strip()}
 
     # Read DAILY-TRANSACTIONS.dat (real-time + pending)
     txn_file = cobol.DATA_INPUT / "DAILY-TRANSACTIONS.dat"
@@ -317,7 +323,7 @@ async def get_ledger(account_id: str | None = None, limit: int = 50):
             if len(line) < 80:
                 continue
             acct = line[10:20].strip()
-            if account_id and acct != account_id:
+            if filter_ids and acct not in filter_ids:
                 continue
             try:
                 amount = int(line[23:34]) / 100.0
@@ -342,7 +348,7 @@ async def get_ledger(account_id: str | None = None, limit: int = 50):
             if len(line) < 80:
                 continue
             acct = line[10:20].strip()
-            if account_id and acct != account_id:
+            if filter_ids and acct not in filter_ids:
                 continue
             try:
                 amount = int(line[23:34]) / 100.0
