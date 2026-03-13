@@ -173,11 +173,14 @@ class TestBatch:
     def test_batch_response_shape(self):
         """If COBOL is available, run a batch and check shape."""
         import subprocess
-        cobc_check = subprocess.run(
-            ["cobc", "--version"], capture_output=True
-        )
-        if cobc_check.returncode != 0:
-            pytest.skip("GnuCOBOL not available in test environment")
+        try:
+            cobc_check = subprocess.run(
+                ["cobc", "--version"], capture_output=True
+            )
+            if cobc_check.returncode != 0:
+                pytest.skip("GnuCOBOL not available in test environment")
+        except FileNotFoundError:
+            pytest.skip("GnuCOBOL not installed")
 
         r = client.post("/batch/run")
         assert r.status_code == 200
