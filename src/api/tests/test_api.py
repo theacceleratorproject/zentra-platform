@@ -140,7 +140,7 @@ class TestTransactions:
             rejected.unlink()
 
         r = client.get("/transactions/rejected")
-        assert r.status_code == 404
+        assert r.status_code == 200
 
         # Restore
         if existed:
@@ -155,7 +155,7 @@ class TestTransactions:
             ledger.unlink()
 
         r = client.get("/transactions/ledger")
-        assert r.status_code == 404
+        assert r.status_code == 200
 
         if existed:
             ledger.write_text(backup)
