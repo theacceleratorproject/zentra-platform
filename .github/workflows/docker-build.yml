@@ -23,6 +23,7 @@ jobs:
           context: .
           file: docker/api/Dockerfile
           push: false
+          load: true
           tags: zentra-api:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
