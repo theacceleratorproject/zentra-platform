@@ -1,5 +1,4 @@
 name: Deploy to AWS
-
 on:
   push:
     branches: [main]
@@ -17,7 +16,6 @@ jobs:
     name: Deploy to EC2
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    environment: production
 
     steps:
       - uses: actions/checkout@v4
@@ -28,12 +26,15 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          request_pty: true
           script: |
-            cd /opt/zentra
+            cd /home/ubuntu/zentra-platform
             git pull origin main
-            docker compose down
-            docker compose build --no-cache
+            sudo chmod 666 /var/run/docker.sock
+            export FRONTEND_PORT=3000
+            docker compose build frontend
             docker compose up -d
-            sleep 15
-            curl -f http://localhost:8000/health && echo "API healthy" || echo "API health check failed"
+            sleep 10
+            curl -f http://localhost:8000/health && echo "✓ API healthy" || echo "✗ API health check failed"
             echo "Deploy complete: $(date)"
