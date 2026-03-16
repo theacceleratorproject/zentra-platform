@@ -329,18 +329,6 @@ See [Deployment Guide](docs/deployment-guide.md) for step-by-step EC2 setup.
 
 ---
 
-## 🤖 Claude Code Workflow
-
-```
-1. Write feature spec in plain English
-2. Ask Claude Code to generate COBOL module
-3. Run: bash scripts/run.sh <program>
-4. Paste errors back to Claude Code for fixes
-5. Commit working code to GitHub
-```
-
----
-
 ## 🛠️ Tech Stack
 
 | Layer | Technology |
